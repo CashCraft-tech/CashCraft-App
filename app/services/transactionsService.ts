@@ -1,0 +1,223 @@
+import { 
+  collection, 
+  doc, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  getDocs, 
+  query, 
+  where, 
+  orderBy,
+  serverTimestamp,
+  limit,
+  startAfter,
+  getDoc
+} from 'firebase/firestore';
+import { db } from '../firebaseConfig';
+
+export interface Transaction {
+  id?: string;
+  userId: string;
+  categoryId: string;
+  categoryName?: string;
+  categoryIcon?: string;
+  categoryColor?: string;
+  amount: number;
+  type: 'income' | 'expense';
+  description: string;
+  date: Date;
+  location?: string;
+  notes?: string;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+export interface TransactionStats {
+  totalIncome: number;
+  totalExpense: number;
+  balance: number;
+  transactionCount: number;
+}
+
+export const transactionsService = {
+  // Get transactions for a user with pagination
+  async getUserTransactions(
+    userId: string, 
+    limitCount: number = 20, 
+    lastTransaction?: any
+  ): Promise<Transaction[]> {
+    try {
+      console.log('Fetching transactions for userId:', userId);
+      
+      let q = query(
+        collection(db, 'transactions'),
+        where('userId', '==', userId),
+        orderBy('date', 'desc'),
+        limit(limitCount)
+      );
+
+      if (lastTransaction) {
+        q = query(q, startAfter(lastTransaction));
+      }
+
+      const querySnapshot = await getDocs(q);
+      console.log('Query snapshot size:', querySnapshot.size);
+      
+      const transactions: Transaction[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        console.log('Transaction data:', data);
+        transactions.push({
+          id: doc.id,
+          ...data,
+          date: data.date.toDate() // Convert Firestore timestamp to Date
+        } as Transaction);
+      });
+      
+      console.log('Returning transactions:', transactions);
+      return transactions;
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      throw error;
+    }
+  },
+
+  // Get transactions by date range
+  async getTransactionsByDateRange(
+    userId: string, 
+    startDate: Date, 
+    endDate: Date
+  ): Promise<Transaction[]> {
+    try {
+      const q = query(
+        collection(db, 'transactions'),
+        where('userId', '==', userId),
+        where('date', '>=', startDate),
+        where('date', '<=', endDate),
+        orderBy('date', 'desc')
+      );
+
+      const querySnapshot = await getDocs(q);
+      const transactions: Transaction[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        transactions.push({
+          id: doc.id,
+          ...data,
+          date: data.date.toDate()
+        } as Transaction);
+      });
+      
+      return transactions;
+    } catch (error) {
+      console.error('Error fetching transactions by date range:', error);
+      throw error;
+    }
+  },
+
+  // Add a new transaction
+  async addTransaction(transaction: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    try {
+      const docRef = await addDoc(collection(db, 'transactions'), {
+        ...transaction,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+      
+      return docRef.id;
+    } catch (error) {
+      console.error('Error adding transaction:', error);
+      throw error;
+    }
+  },
+
+  // Update a transaction
+  async updateTransaction(transactionId: string, updates: Partial<Transaction>): Promise<void> {
+    try {
+      const transactionRef = doc(db, 'transactions', transactionId);
+      await updateDoc(transactionRef, {
+        ...updates,
+        updatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      console.error('Error updating transaction:', error);
+      throw error;
+    }
+  },
+
+  // Delete a transaction
+  async deleteTransaction(transactionId: string): Promise<void> {
+    try {
+      await deleteDoc(doc(db, 'transactions', transactionId));
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      throw error;
+    }
+  },
+
+  // Get transaction statistics
+  async getTransactionStats(userId: string, startDate?: Date, endDate?: Date): Promise<TransactionStats> {
+    try {
+      let transactions: Transaction[];
+      
+      if (startDate && endDate) {
+        transactions = await this.getTransactionsByDateRange(userId, startDate, endDate);
+      } else {
+        transactions = await this.getUserTransactions(userId, 1000); // Get all transactions
+      }
+
+      const stats: TransactionStats = {
+        totalIncome: 0,
+        totalExpense: 0,
+        balance: 0,
+        transactionCount: transactions.length
+      };
+
+      transactions.forEach(transaction => {
+        if (transaction.type === 'income') {
+          stats.totalIncome += transaction.amount;
+        } else {
+          stats.totalExpense += transaction.amount;
+        }
+      });
+
+      stats.balance = stats.totalIncome - stats.totalExpense;
+      
+      return stats;
+    } catch (error) {
+      console.error('Error getting transaction stats:', error);
+      throw error;
+    }
+  },
+
+  // Get transactions by category
+  async getTransactionsByCategory(userId: string, categoryId: string): Promise<Transaction[]> {
+    try {
+      const q = query(
+        collection(db, 'transactions'),
+        where('userId', '==', userId),
+        where('categoryId', '==', categoryId),
+        orderBy('date', 'desc')
+      );
+
+      const querySnapshot = await getDocs(q);
+      const transactions: Transaction[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        transactions.push({
+          id: doc.id,
+          ...data,
+          date: data.date.toDate()
+        } as Transaction);
+      });
+      
+      return transactions;
+    } catch (error) {
+      console.error('Error fetching transactions by category:', error);
+      throw error;
+    }
+  }
+}; 

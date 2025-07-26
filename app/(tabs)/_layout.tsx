@@ -1,45 +1,112 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
-import { Platform } from 'react-native';
+import { View } from 'react-native';
+import { Tabs } from "expo-router";
+import { Ionicons, MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
+import { Platform } from "react-native";
 
-import { HapticTab } from '@/components/HapticTab';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import TabBarBackground from '@/components/ui/TabBarBackground';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
-
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
+export default function RootLayout() {
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
-        tabBarStyle: Platform.select({
-          ios: {
-            // Use a transparent background on iOS to show the blur effect
-            position: 'absolute',
+    <View style={{ flex: 1, backgroundColor: 'white' }}>
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarShowLabel: false,
+          tabBarStyle: {
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: "#fff",
+            height: Platform.OS === "ios" ? 80 : 90,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+            elevation: 8,
+            borderTopWidth: 1,
+            borderTopColor: '#E0E0E0',
+            paddingBottom: Platform.OS === "ios" ? 20 : 8,
+            paddingTop: 8,
           },
-          default: {},
-        }),
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          tabBarItemStyle: {
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+          },
         }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
-        }}
-      />
-    </Tabs>
+      >
+        <Tabs.Screen
+          name="home"
+          options={{
+            tabBarIcon: ({ focused }) => (
+              <Ionicons
+                name="home"
+                size={28}
+                color={focused ? "#4caf50" : "#888"}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="dashboard"
+          options={{
+            tabBarIcon: ({ focused }) => (
+              <MaterialIcons
+                name="dashboard-customize"
+                size={29}
+                color={focused ? "#4caf50" : "#888"}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="add"
+          options={{
+            tabBarIcon: ({ focused }) => (
+              <View
+                style={{
+                  backgroundColor: focused ? "#4caf50" : "#888",
+                  width: 30,
+                  height: 30,
+                  borderRadius: 4,
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                <Ionicons
+                  name="add"
+                  size={28}
+                  color="#fff"
+                />
+              </View>
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="transactions"
+          options={{
+            tabBarIcon: ({ focused }) => (
+              <FontAwesome5
+                name="hand-holding-usd"
+                size={28}
+                color={focused ? "#4caf50" : "#888"}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="profile"
+          options={{
+            tabBarIcon: ({ focused }) => (
+              <Ionicons
+                name="person"
+                size={28}
+                color={focused ? "#4caf50" : "#888"}
+              />
+            ),
+          }}
+        />
+      </Tabs>
+    </View>
   );
 }

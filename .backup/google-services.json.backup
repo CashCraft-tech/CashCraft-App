@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "888504934769",
+    "project_id": "bachat-991f9",
+    "storage_bucket": "bachat-991f9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:888504934769:android:ebf8927e8ab117606156d0",
+        "android_client_info": {
+          "package_name": "com.bachat.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBAQp3DAHj-16bmWi9JwbnEvpfmXKhySoI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
