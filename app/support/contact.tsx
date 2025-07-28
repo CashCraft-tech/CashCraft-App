@@ -1,35 +1,55 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, Platform, ActivityIndicator } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { contactService } from '../services/supportService';
+import { useAuth } from '../context/AuthContext';
 
 export default function ContactSupport() {
+  const { user } = useAuth();
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [contactMethod, setContactMethod] = useState<'email' | 'chat' | 'call'>('email');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!subject.trim() || !message.trim()) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
     
-    Alert.alert(
-      'Message Sent',
-      'Thank you for contacting us. We\'ll get back to you within 24 hours.',
-      [
-        {
-          text: 'OK',
-          onPress: () => {
-            setSubject('');
-            setMessage('');
-            router.back();
+    setLoading(true);
+    try {
+      await contactService.submitContact({
+        userId: user?.uid || undefined,
+        userEmail: user?.email || undefined,
+        subject: subject.trim(),
+        message: message.trim(),
+        contactMethod
+      });
+      
+      Alert.alert(
+        'Message Sent',
+        'Thank you for contacting us. We\'ll get back to you within 24 hours.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              setSubject('');
+              setMessage('');
+              router.back();
+            }
           }
-        }
-      ]
-    );
+        ]
+      );
+    } catch (error) {
+      console.error('Error submitting contact:', error);
+      Alert.alert('Error', 'Failed to send message. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const contactMethods = [
@@ -141,8 +161,12 @@ export default function ContactSupport() {
               />
             </View>
 
-            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-              <Text style={styles.submitButtonText}>Send Message</Text>
+            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} disabled={loading}>
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.submitButtonText}>Send Message</Text>
+              )}
             </TouchableOpacity>
           </View>
         )}

@@ -160,9 +160,10 @@ export default function TermsOfService() {
               If you have any questions about these Terms of Service, please contact us at:
             </Text>
             <View style={styles.contactInfo}>
-              <Text style={styles.contactText}>Email: legal@bachat.app</Text>
-              <Text style={styles.contactText}>Address: [Your Company Address]</Text>
-              <Text style={styles.contactText}>Phone: +91 1800-123-4567</Text>
+            <Text style={styles.contactText}>Email: prasadpansare02@gmail.com</Text>
+              <Text style={styles.contactText}>Address:  Hillview Residency, Behind Mahatma Society, Kothrud, Pune 411038</Text>
+              <Text style={styles.contactText}>Phone: +91 9765559032</Text>
+          
             </View>
           </View>
         </View>

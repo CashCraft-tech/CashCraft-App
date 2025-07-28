@@ -107,11 +107,11 @@ export default function SupportIndex() {
           <View style={styles.contactInfo}>
             <View style={styles.contactItem}>
               <Ionicons name="call" size={16} color="#4caf50" />
-              <Text style={styles.contactText}>+91 1800-123-4567</Text>
+              <Text style={styles.contactText}>+91 9765559032</Text>
             </View>
             <View style={styles.contactItem}>
               <Ionicons name="mail" size={16} color="#4caf50" />
-              <Text style={styles.contactText}>support@bachat.app</Text>
+              <Text style={styles.contactText}>prasadpansare02@gmail.com</Text>
             </View>
             <View style={styles.contactItem}>
               <Ionicons name="time" size={16} color="#4caf50" />
