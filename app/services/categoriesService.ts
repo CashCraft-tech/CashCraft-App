@@ -118,4 +118,7 @@ export const categoriesService = {
       throw error;
     }
   }
-}; 
+};
+
+// Default export to satisfy router requirements
+export default categoriesService; 

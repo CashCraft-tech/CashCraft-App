@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, Platform } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -59,9 +60,18 @@ export default function ContactSupport() {
   ];
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Header */}
+    <SafeAreaView style={{ flex: 1 }} edges={['top','left','right','bottom']}>
+      <KeyboardAwareScrollView
+        contentContainerStyle={{
+      
+          paddingBottom: 40,
+       
+        }}
+        enableOnAndroid={true}
+        extraScrollHeight={20}
+        keyboardShouldPersistTaps="handled"
+        enableAutomaticScroll={true}
+      >
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#333" />
@@ -113,6 +123,7 @@ export default function ContactSupport() {
                 placeholder="Brief description of your issue"
                 value={subject}
                 onChangeText={setSubject}
+                placeholderTextColor="#888"
               />
             </View>
 
@@ -126,6 +137,7 @@ export default function ContactSupport() {
                 multiline
                 numberOfLines={6}
                 textAlignVertical="top"
+                placeholderTextColor="#888"
               />
             </View>
 
@@ -186,7 +198,7 @@ export default function ContactSupport() {
             <Text style={styles.infoText}>Include screenshots if reporting a bug</Text>
           </View>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }

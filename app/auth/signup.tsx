@@ -1,13 +1,16 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Image, ActivityIndicator, Modal } from "react-native";
+import React, { useState, useEffect, useRef } from "react";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Image, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, Keyboard } from "react-native";
 import { useRouter } from "expo-router";
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 import { categoriesService } from '../services/categoriesService';
+import { SafeAreaView } from "react-native-safe-area-context";
+
 
 export default function Signup() {
   const router = useRouter();
+  const scrollViewRef = useRef<ScrollView>(null);
   const [form, setForm] = useState({
     fullName: "",
     phone: "",
@@ -20,12 +23,46 @@ export default function Signup() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      keyboardDidShowListener?.remove();
+      keyboardDidHideListener?.remove();
+    };
+  }, []);
 
   const handleChange = (key: string, value: string) => setForm({ ...form, [key]: value });
+
+  const handleInputFocus = () => {
+    // Scroll to the focused input after a short delay
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  };
 
   const handleSignup = async () => {
     setError("");
     setSuccess("");
+    
+    // Validation
+    if (!form.fullName.trim() || !form.email.trim() || !form.password.trim()) {
+      setError('Please fill in all required fields');
+      return;
+    }
+    
+    if (form.password.length < 6) {
+      setError('Password should be at least 6 characters long');
+      return;
+    }
+    
     setLoading(true);
     try {
       console.log('Attempting to create account for:', form.email);
@@ -86,110 +123,347 @@ export default function Signup() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Image source={require("../../assets/images/icon.png")} style={styles.logo} />
-      <Text style={styles.title}>Create Account</Text>
-      <Text style={styles.label}>Full Name</Text>
-      <TextInput style={styles.input} placeholder="Enter your full name" value={form.fullName} onChangeText={v => handleChange("fullName", v)} />
-      <Text style={styles.label}>Phone Number</Text>
-      <TextInput style={styles.input} placeholder="Enter your phone number" value={form.phone} onChangeText={v => handleChange("phone", v)} keyboardType="phone-pad" />
-      <Text style={styles.label}>Gender</Text>
-      <TextInput style={styles.input} placeholder="Enter your gender" value={form.gender} onChangeText={v => handleChange("gender", v)} />
-      <Text style={styles.label}>Profession</Text>
-      <TextInput style={styles.input} placeholder="Enter your profession" value={form.profession} onChangeText={v => handleChange("profession", v)} />
-      <Text style={styles.label}>Username</Text>
-      <TextInput style={styles.input} placeholder="Choose a username" value={form.username} onChangeText={v => handleChange("username", v)} autoCapitalize="none" />
-      <Text style={styles.label}>Email</Text>
-      <TextInput style={styles.input} placeholder="Enter your email" value={form.email} onChangeText={v => handleChange("email", v)} keyboardType="email-address" autoCapitalize="none" />
-      <Text style={styles.label}>Password</Text>
-      <TextInput style={styles.input} placeholder="Create a password" value={form.password} onChangeText={v => handleChange("password", v)} secureTextEntry />
-              <TouchableOpacity style={styles.createButton} onPress={handleSignup} disabled={loading}>
-          <Text style={styles.createText}>{loading ? 'Creating...' : 'Create Account'}</Text>
-        </TouchableOpacity>
-        {error ? <Text style={{ color: 'red', marginBottom: 8 }}>{error}</Text> : null}
-        {success ? <Text style={{ color: 'green', marginBottom: 8 }}>{success}</Text> : null}
-        <View style={styles.loginContainer}>
-          <Text>Already have an account? </Text>
-          <TouchableOpacity onPress={() => router.push("/auth/login")}> 
-            <Text style={styles.loginText}>Login</Text>
+    <SafeAreaView style={{ flex: 1,backgroundColor: "#eaf7ec" }}>
+    <KeyboardAvoidingView 
+      style={styles.container} 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+    >
+      <ScrollView 
+        ref={scrollViewRef}
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+      >
+        <View style={styles.header}>
+          <Image source={require("../../assets/images/icon.png")} style={styles.logo} />
+          <Text style={styles.title}>Bachat</Text>
+        </View>
+        <Text style={styles.subtitle}>Smart expense tracking made simple</Text>
+
+        <View style={styles.box}>
+          <Text style={styles.boxTitle}>Create Account</Text>
+          <Text style={styles.boxSubtitle}>Join us to start tracking your expenses</Text>
+          
+          <Text style={styles.label}>Full Name *</Text>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your full name"
+              value={form.fullName}
+              onChangeText={v => handleChange("fullName", v)}
+              placeholderTextColor="#888"
+              onFocus={handleInputFocus}
+            />
+          </View>
+
+          <Text style={styles.label}>Email *</Text>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your email"
+              value={form.email}
+              onChangeText={v => handleChange("email", v)}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              placeholderTextColor="#888"
+              onFocus={handleInputFocus}
+            />
+          </View>
+
+          <Text style={styles.label}>Password *</Text>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Create a password (min 6 characters)"
+              value={form.password}
+              onChangeText={v => handleChange("password", v)}
+              secureTextEntry
+              placeholderTextColor="#888"
+              onFocus={handleInputFocus}
+            />
+          </View>
+
+          <Text style={styles.label}>Phone Number</Text>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your phone number"
+              value={form.phone}
+              onChangeText={v => handleChange("phone", v)}
+              keyboardType="phone-pad"
+              placeholderTextColor="#888"
+              onFocus={handleInputFocus}
+            />
+          </View>
+
+          <Text style={styles.label}>Gender</Text>
+          <View style={styles.genderContainer}>
+            <TouchableOpacity 
+              style={[styles.genderOption, form.gender === 'Male' && styles.genderOptionActive]} 
+              onPress={() => handleChange("gender", "Male")}
+            >
+              <Text style={[styles.genderText, form.gender === 'Male' && styles.genderTextActive]}>Male</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.genderOption, form.gender === 'Female' && styles.genderOptionActive]} 
+              onPress={() => handleChange("gender", "Female")}
+            >
+              <Text style={[styles.genderText, form.gender === 'Female' && styles.genderTextActive]}>Female</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.genderOption, form.gender === 'Other' && styles.genderOptionActive]} 
+              onPress={() => handleChange("gender", "Other")}
+            >
+              <Text style={[styles.genderText, form.gender === 'Other' && styles.genderTextActive]}>Other</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.label}>Profession</Text>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your profession"
+              value={form.profession}
+              onChangeText={v => handleChange("profession", v)}
+              placeholderTextColor="#888"
+              onFocus={handleInputFocus}
+            />
+          </View>
+
+          <Text style={styles.label}>Username</Text>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Choose a username"
+              value={form.username}
+              onChangeText={v => handleChange("username", v)}
+              autoCapitalize="none"
+              placeholderTextColor="#888"
+              onFocus={handleInputFocus}
+            />
+          </View>
+
+          <TouchableOpacity style={styles.signupButton} onPress={handleSignup} disabled={loading}>
+            <Text style={styles.signupText}>{loading ? 'Creating Account...' : 'Create Account'}</Text>
           </TouchableOpacity>
+          
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          {success ? <Text style={styles.successText}>{success}</Text> : null}
+          
+          <View style={styles.loginContainer}>
+            <Text style={styles.loginPrompt}>Already have an account? </Text>
+            <TouchableOpacity onPress={() => router.push("/auth/login")}> 
+              <Text style={styles.loginText}>Sign In</Text>
+            </TouchableOpacity>
+          </View>
         </View>
         
-        {/* Loading Modal */}
-        <Modal
-          visible={loading}
-          transparent={true}
-          animationType="fade"
-        >
-          <View style={styles.loadingOverlay}>
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#4caf50" />
-              <Text style={styles.loadingText}>Creating your account...</Text>
-              <Text style={styles.loadingSubtext}>Please wait while we set up your profile</Text>
-            </View>
-          </View>
-        </Modal>
+        <Text style={styles.termsText}>
+          By creating an account, you agree to our <Text style={styles.link}>Terms of Service</Text> and <Text style={styles.link}>Privacy Policy</Text>
+        </Text>
       </ScrollView>
-    );
-  }
+      
+      {/* Loading Modal */}
+      <Modal
+        visible={loading}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#4caf50" />
+            <Text style={styles.loadingText}>Creating your account...</Text>
+            <Text style={styles.loadingSubtext}>Please wait while we set up your profile</Text>
+          </View>
+        </View>
+      </Modal>
+    </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
+    flex: 1,
     backgroundColor: "#eaf7ec",
+  },
+  scrollContent: {
+    flexGrow: 1,
     alignItems: "center",
     padding: 20,
     paddingTop: 40,
   },
+  scrollContentAndroid: {
+    paddingBottom: 20,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
   logo: {
-    width: 64,
-    height: 64,
-    marginBottom: 20,
+    width: 44,
+    height: 44,
+    marginHorizontal: 20,
+    marginVertical: 20,
   },
   title: {
     fontSize: 28,
     fontWeight: "bold",
-    marginTop: 0,
+    marginTop: 10,
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  subtitle: {
+    fontSize: 15,
+    color: "#4caf50",
+    marginBottom: 24,
+    textAlign: "center",
+  },
+  box: {
+    backgroundColor: "white",
+    padding: 24,
+    borderRadius: 16,
+    width: "100%",
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  boxTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 8,
+    textAlign: "center",
+    color: "#222",
+  },
+  boxSubtitle: {
+    fontSize: 14,
+    color: "#666",
     marginBottom: 24,
     textAlign: "center",
   },
   label: {
     alignSelf: "flex-start",
-    marginLeft: 8,
-    marginTop: 10,
-    fontWeight: "bold",
+    marginLeft: 4,
+    marginTop: 16,
+    marginBottom: 8,
+    fontWeight: "600",
+    color: "#333",
+    fontSize: 14,
+  },
+  inputContainer: {
+    width: "100%",
+    backgroundColor: "#f8f9fa",
+    borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: "#e9ecef",
   },
   input: {
-    width: "100%",
-    backgroundColor: "#f5f5f5",
-    borderRadius: 8,
-    height: 44,
+    flex: 1,
+    height: 48,
     fontSize: 16,
-    paddingHorizontal: 8,
+    color: "#333",
+  },
+  genderContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 8,
   },
-  createButton: {
-    backgroundColor: "#4caf50",
-    borderRadius: 8,
-    width: "100%",
-    paddingVertical: 14,
+  genderOption: {
+    flex: 1,
+    backgroundColor: "#f8f9fa",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginHorizontal: 4,
     alignItems: "center",
-    marginTop: 16,
-    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#e9ecef",
   },
-  createText: {
+  genderOptionActive: {
+    backgroundColor: "#4caf50",
+    borderColor: "#4caf50",
+  },
+  genderText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#666",
+  },
+  genderTextActive: {
+    color: "#fff",
+  },
+  signupButton: {
+    backgroundColor: "#4caf50",
+    borderRadius: 12,
+    width: "100%",
+    paddingVertical: 16,
+    alignItems: "center",
+    marginTop: 24,
+    marginBottom: 16,
+    shadowColor: '#4caf50',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  signupText: {
     color: "#fff",
     fontWeight: "bold",
     fontSize: 16,
   },
+  errorText: {
+    color: '#ff4444',
+    marginBottom: 12,
+    textAlign: 'center',
+    fontSize: 14,
+  },
+  successText: {
+    color: '#4caf50',
+    marginBottom: 12,
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   loginContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  loginPrompt: {
+    color: "#666",
+    fontSize: 14,
   },
   loginText: {
     color: "#4caf50",
     fontWeight: "bold",
+    fontSize: 14,
+  },
+  termsText: {
+    fontSize: 12,
+    color: "#888",
+    textAlign: "center",
+    marginTop: 16,
+    lineHeight: 18,
+  },
+  link: {
+    color: "#4caf50",
+    textDecorationLine: "underline",
   },
   loadingOverlay: {
     flex: 1,
@@ -199,18 +473,18 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 30,
+    borderRadius: 16,
+    padding: 32,
     alignItems: 'center',
-    minWidth: 250,
+    minWidth: 280,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
     shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowRadius: 8,
+    elevation: 8,
   },
   loadingText: {
     fontSize: 18,

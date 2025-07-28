@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from "react-native";
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useRouter } from "expo-router";
 
 export default function ForgotPassword() {
@@ -7,7 +8,13 @@ export default function ForgotPassword() {
   const [email, setEmail] = useState("");
 
   return (
-    <View style={styles.container}>
+    <KeyboardAwareScrollView
+      contentContainerStyle={styles.container}
+      enableOnAndroid={true}
+      extraScrollHeight={20}
+      keyboardShouldPersistTaps="handled"
+      enableAutomaticScroll={true}
+    >
       <Image source={require("../../assets/images/icon.png")} style={styles.logo} />
       <Text style={styles.title}>Forgot Password</Text>
       <Text style={styles.subtitle}>Enter your email address to receive a verification code.</Text>
@@ -26,7 +33,7 @@ export default function ForgotPassword() {
       <TouchableOpacity onPress={() => router.push("/auth/login")}> 
         <Text style={styles.backText}>Back to Login</Text>
       </TouchableOpacity>
-    </View>
+    </KeyboardAwareScrollView>
   );
 }
 
@@ -37,6 +44,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
     paddingTop: 40,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   header: {
     flexDirection: "row",

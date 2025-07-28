@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, TouchableOpacity, Image } from "react-native";
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -10,6 +10,16 @@ import { useAuth } from '../context/AuthContext';
 import { formatDateShort } from '../utils/dateUtils';
 import { getDoc, doc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
+import { StatusBar } from 'expo-status-bar';
+import { sendNotification } from '../services/notificationService';
+import Constants from 'expo-constants';
+
+declare global {
+  interface Window {
+    __sentLowBalanceNotif?: boolean;
+    __sentAppUpdateNotif?: boolean;
+  }
+}
 
 export default function Home() {
   const { user } = useAuth();
@@ -65,6 +75,21 @@ export default function Home() {
       // Fetch stats
       const userStats = await transactionsService.getTransactionStats(user.uid);
       setStats(userStats);
+      // Notify if balance is very low (<=10% of total income)
+      if (
+        userStats.totalIncome > 0 &&
+        userStats.balance > 0 &&
+        userStats.balance <= 0.1 * userStats.totalIncome &&
+        !window.__sentLowBalanceNotif
+      ) {
+        await sendNotification({
+          userId: user.uid,
+          title: 'Balance Low',
+          body: 'Your balance is below 10% of your total income. Consider reviewing your spending.',
+          icon: 'alert-circle-outline',
+        });
+        window.__sentLowBalanceNotif = true;
+      }
       
       // Calculate category spending
       const allTransactions = await transactionsService.getUserTransactions(user.uid, 1000);
@@ -77,6 +102,22 @@ export default function Home() {
       });
       
       setCategorySpending(spendingByCategory);
+      
+      // Check for app update (placeholder: compare to hardcoded latest version)
+      const currentVersion = (Constants.manifest as any)?.version ?? '1.0.0';
+      const latestVersion = '1.0.1'; // Replace with remote config or API in production
+      if (
+        currentVersion !== latestVersion &&
+        !window.__sentAppUpdateNotif
+      ) {
+        await sendNotification({
+          userId: user.uid,
+          title: 'App Update Available',
+          body: 'A new version of Bachat is available. Please update for the best experience.',
+          icon: 'cloud-download-outline',
+        });
+        window.__sentAppUpdateNotif = true;
+      }
       
       setFirebaseStatus('Firebase Connected! ✅');
     } catch (error) {
@@ -159,9 +200,18 @@ export default function Home() {
     setRefreshing(false);
   };
 
+  // Determine avatar seed and gender
+  const nameSeed = userProfile.firstName || user?.displayName || user?.email || 'user';
+  // Alternate gender based on hash of seed for demo
+  const isMale = nameSeed.charCodeAt(0) % 2 === 0;
+  const avatarUrl = isMale
+    ? `https://api.dicebear.com/7.x/adventurer/png?seed=${encodeURIComponent(nameSeed)}&gender=male`
+    : `https://api.dicebear.com/7.x/adventurer/png?seed=${encodeURIComponent(nameSeed)}&gender=female`;
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['top','left','right']}>
+        <StatusBar style="dark" />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color="#4caf50" />
           <Text style={{ marginTop: 16, color: '#666' }}>Loading your data...</Text>
@@ -172,6 +222,7 @@ export default function Home() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top','left','right']}>
+      <StatusBar style="dark" />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -182,7 +233,7 @@ export default function Home() {
         {/* Header */}
         <View style={styles.headerRow}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View style={styles.avatar} />
+            <Image source={{ uri: avatarUrl }} style={styles.avatar} />
             <View>
               <Text style={styles.greeting}>{getGreeting()}</Text>
               <Text style={styles.name}>
@@ -191,7 +242,9 @@ export default function Home() {
             </View>
           </View>
           <View style={styles.bellCircle}>
-            <Ionicons name="notifications-outline" size={20} color="#B0B0B0" />
+            <TouchableOpacity onPress={() => router.push('/components/notifications')}>
+              <Ionicons name="notifications-outline" size={25} color="#B0B0B0" />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -301,7 +354,7 @@ export default function Home() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
+  
   },
   scrollContent: {
     backgroundColor: '#F8F9FB',
@@ -313,11 +366,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 24,
+    marginTop: 0,
     
   },
   avatar: {
-    width: 40,
-    height: 40,
+    width: 50,
+    height: 50,
     borderRadius: 20,
     backgroundColor: '#E0E0E0',
     marginRight: 12,
@@ -329,16 +383,21 @@ const styles = StyleSheet.create({
   },
   name: {
     color: '#222',
-    fontSize: 15,
+    fontSize: 18,
     fontWeight: 'bold',
   },
   bellCircle: {
-    width: 32,
-    height: 32,
+    width: 52,
+    height: 52,
     borderRadius: 16,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: 'white',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   balanceCard: {
     backgroundColor: '#23242A',

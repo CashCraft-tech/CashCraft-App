@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, FlatList, Modal, Dimensions, ActivityIndicator, RefreshControl } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Modal, Dimensions, ActivityIndicator, RefreshControl, Alert } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
 import { transactionsService, Transaction } from '../services/transactionsService';
 import { useAuth } from '../context/AuthContext';
 import { formatDateShort } from '../utils/dateUtils';
+import { sendNotification } from '../services/notificationService';
 
 // Get screen dimensions
 const { height: screenHeight } = Dimensions.get('window');
@@ -140,153 +143,275 @@ export default function Transactions() {
   
   const total = filtered.reduce((sum, tx) => sum + tx.amount, 0);
 
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
-      <View style={{flex:1,backgroundColor:'#F8F9FB'}}>
-      <View style={styles.headerRow}>
-        <Text style={styles.headerTitle}>Transactions</Text>
-      </View>
-      <View style={styles.searchRow}>
-        <Ionicons name="search" size={20} color="#B0B0B0" style={{ marginRight: 8 }} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search transactions..."
-          value={search}
-          onChangeText={setSearch}
-        />
-      </View>
-      <View style={styles.actionRow}>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => setShowSort(true)}>
-          <Ionicons name="swap-vertical" size={18} color="#888" />
-          <Text style={styles.actionBtnText}>Sort</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => setShowFilter(true)}>
-          <Ionicons name="filter" size={18} color="#888" />
-          <Text style={styles.actionBtnText}>Filter</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => setShowDownload(true)}>
-          <Ionicons name="download-outline" size={18} color="#888" />
-        </TouchableOpacity>
-      </View>
+  // Download functions
+  const generateCSV = (transactions: Transaction[]) => {
+    const headers = 'Date,Description,Category,Type,Amount\n';
+    const rows = transactions.map(tx => 
+      `${tx.date.toLocaleDateString()},"${tx.description}",${tx.categoryName},${tx.type},${tx.amount}`
+    ).join('\n');
+    return headers + rows;
+  };
+
+  const generatePDF = (transactions: Transaction[]) => {
+    const total = transactions.reduce((sum, tx) => sum + tx.amount, 0);
+    const income = transactions.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0);
+    const expense = transactions.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0);
+    
+    let pdfContent = `
+Transaction Report
+Generated on: ${new Date().toLocaleDateString()}
+Total Transactions: ${transactions.length}
+Total Income: ₹${income.toLocaleString()}
+Total Expense: ₹${expense.toLocaleString()}
+Net Balance: ₹${total.toLocaleString()}
+
+Transactions:
+`;
+    
+    transactions.forEach((tx, index) => {
+      pdfContent += `
+${index + 1}. ${tx.description}
+   Date: ${tx.date.toLocaleDateString()}
+   Category: ${tx.categoryName}
+   Type: ${tx.type}
+   Amount: ₹${tx.amount.toLocaleString()}
+`;
+    });
+    
+    return pdfContent;
+  };
+
+  const downloadFile = async (content: string, filename: string, mimeType: string) => {
+    try {
+      const fileUri = `${FileSystem.documentDirectory}${filename}`;
+      await FileSystem.writeAsStringAsync(fileUri, content);
       
-      {loading ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#4caf50" />
-          <Text style={{ marginTop: 16, color: '#666' }}>Loading transactions...</Text>
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType,
+          dialogTitle: `Download ${filename}`,
+        });
+      } else {
+        Alert.alert('Sharing not available', 'File saved to device storage');
+      }
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      Alert.alert('Error', 'Failed to download file');
+    }
+  };
+
+  const handleDownloadCSV = async () => {
+    const csvContent = generateCSV(filtered);
+    await downloadFile(csvContent, 'transactions.csv', 'text/csv');
+    // Send notification for successful download
+    if (user?.uid) {
+      await sendNotification({
+        userId: user.uid,
+        title: 'Download Complete',
+        body: `CSV file with ${filtered.length} transaction${filtered.length !== 1 ? 's' : ''} downloaded successfully.`,
+        icon: 'download-outline',
+      });
+    }
+    setShowDownload(false);
+  };
+
+  const handleDownloadPDF = async () => {
+    const pdfContent = generatePDF(filtered);
+    await downloadFile(pdfContent, 'transactions.txt', 'text/plain'); // Using .txt for now since we don't have PDF generation
+    // Send notification for successful download
+    if (user?.uid) {
+      await sendNotification({
+        userId: user.uid,
+        title: 'Download Complete',
+        body: `Text file with ${filtered.length} transaction${filtered.length !== 1 ? 's' : ''} downloaded successfully.`,
+        icon: 'download-outline',
+      });
+    }
+    setShowDownload(false);
+  };
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F8F9FB' }} edges={['top','left','right']}>
+      <View style={{flex: 1, backgroundColor: '#F8F9FB'}}>
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#222', marginBottom: 4 }}>Transactions</Text>
+            <Text style={{ fontSize: 14, color: '#666' }}>View and manage your transactions</Text>
+          </View>
+          <View style={styles.bellCircle}>
+            <TouchableOpacity onPress={() => router.push('/components/notifications')}>
+              <Ionicons name="notifications-outline" size={25} color="#B0B0B0" />
+            </TouchableOpacity>
+          </View>
         </View>
-      ) : (
-        <View style={styles.listCard}>
-          <FlatList
-            data={filtered}
-            keyExtractor={item => item.id || Math.random().toString()}
-            renderItem={({ item }) => (
-              <TouchableOpacity style={styles.txRow} onPress={() => router.push({ pathname: '/components/transaction-details', params: { transaction: JSON.stringify(item) } })}>
-                <View style={[styles.txIcon, { backgroundColor: (item.categoryColor || '#666') + '20' }]}>
-                  {getIconComponent(item.categoryIcon || 'category', item.categoryColor || '#666', 20)}
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.txLabel}>{item.description}</Text>
-                                      <Text style={styles.txDate}>{formatDateShort(item.date)}</Text>
-                </View>
-                <Text style={[styles.txAmount, { color: item.type === 'income' ? '#4CAF50' : '#FF5252' }]}>
-                  {item.type === 'income' ? '+' : '-'}₹ {item.amount.toLocaleString()}
-                </Text>
-              </TouchableOpacity>
-            )}
-            ListEmptyComponent={() => (
-              <View style={styles.emptyStateContainer}>
-                <View style={styles.emptyStateIcon}>
-                  <FontAwesome5 name="receipt" size={50} color="#4caf50" />
-                </View>
-                <Text style={styles.emptyStateTitle}>No Transactions Found</Text>
-                <Text style={styles.emptyStateMessage}>
-                  {search || filterType || filterCategory 
-                    ? 'Try adjusting your search or filters' 
-                    : 'Start tracking your finances by adding your first transaction'
-                  }
-                </Text>
-                {!search && !filterType && !filterCategory && (
-                  <TouchableOpacity 
-                    style={styles.emptyStateButton} 
-                    onPress={() => router.push('/(tabs)/add')}
-                  >
-                    <Text style={styles.emptyStateButtonText}>Add Transaction</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-            contentContainerStyle={filtered.length === 0 ? { flex: 1 } : { paddingBottom: 60 }} // Adjust padding for empty state
-            onRefresh={onRefresh}
-            refreshing={refreshing}
+        <View style={styles.searchRow}>
+          <Ionicons name="search" size={20} color="#B0B0B0" style={{ marginRight: 8 }} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search transactions..."
+            value={search}
+            onChangeText={setSearch}
           />
-          {/* Fixed Total Row at Bottom */}
-          <View style={styles.fixedTotalRow}>
-            <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalAmount}>₹ {total}</Text>
-          </View>
         </View>
-      )}
-      {/* Sort Modal */}
-      <Modal visible={showSort} transparent animationType="fade">
-        <TouchableOpacity style={styles.modalOverlay} onPress={() => setShowSort(false)}>
-          <View style={styles.modalCard}>
-            {SORT_OPTIONS.map(opt => (
-              <TouchableOpacity key={opt.value} style={styles.modalOption} onPress={() => { setSort(opt.value); setShowSort(false); }}>
-                <Text style={[styles.modalOptionText, sort === opt.value && { color: '#2979FF', fontWeight: 'bold' }]}>{opt.label}</Text>
+        <View style={styles.actionRow}>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => setShowSort(true)}>
+            <Ionicons name="swap-vertical" size={18} color="#888" />
+            <Text style={styles.actionBtnText}>Sort</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => setShowFilter(true)}>
+            <Ionicons name="filter" size={18} color="#888" />
+            <Text style={styles.actionBtnText}>Filter</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => setShowDownload(true)}>
+            <Ionicons name="download-outline" size={18} color="#888" />
+          </TouchableOpacity>
+        </View>
+        
+        {loading ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color="#4caf50" />
+            <Text style={{ marginTop: 16, color: '#666' }}>Loading transactions...</Text>
+          </View>
+        ) : (
+          <View style={styles.listCard}>
+            <FlatList
+              data={filtered}
+              keyExtractor={item => item.id || Math.random().toString()}
+              renderItem={({ item }) => (
+                <TouchableOpacity style={styles.txRow} onPress={() => router.push({ pathname: '/components/transaction-details', params: { transaction: JSON.stringify(item) } })}>
+                  <View style={[styles.txIcon, { backgroundColor: (item.categoryColor || '#666') + '20' }]}>
+                    {getIconComponent(item.categoryIcon || 'category', item.categoryColor || '#666', 20)}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.txLabel}>{item.description}</Text>
+                    <Text style={styles.txDate}>{formatDateShort(item.date)}</Text>
+                  </View>
+                  <Text style={[styles.txAmount, { color: item.type === 'income' ? '#4CAF50' : '#FF5252' }]}>
+                    {item.type === 'income' ? '+' : '-'}₹ {item.amount.toLocaleString()}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={() => (
+                <View style={styles.emptyStateContainer}>
+                  <View style={styles.emptyStateIcon}>
+                    <FontAwesome5 name="receipt" size={50} color="#4caf50" />
+                  </View>
+                  <Text style={styles.emptyStateTitle}>No Transactions Found</Text>
+                  <Text style={styles.emptyStateMessage}>
+                    {search || filterType || filterCategory 
+                      ? 'Try adjusting your search or filters' 
+                      : 'Start tracking your finances by adding your first transaction'
+                    }
+                  </Text>
+                  {!search && !filterType && !filterCategory && (
+                    <TouchableOpacity 
+                      style={styles.emptyStateButton} 
+                      onPress={() => router.push('/(tabs)/add')}
+                    >
+                      <Text style={styles.emptyStateButtonText}>Add Transaction</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+              contentContainerStyle={filtered.length === 0 ? { flex: 1 } : { paddingBottom: 60 }}
+              onRefresh={onRefresh}
+              refreshing={refreshing}
+            />
+            {/* Fixed Total Row at Bottom */}
+            <View style={styles.fixedTotalRow}>
+              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalAmount}>₹ {total}</Text>
+            </View>
+          </View>
+        )}
+        {/* Sort Modal */}
+        <Modal visible={showSort} transparent animationType="fade">
+          <TouchableOpacity style={styles.modalOverlay} onPress={() => setShowSort(false)}>
+            <View style={styles.modalCard}>
+              {SORT_OPTIONS.map(opt => (
+                <TouchableOpacity key={opt.value} style={styles.modalOption} onPress={() => { setSort(opt.value); setShowSort(false); }}>
+                  <Text style={[styles.modalOptionText, sort === opt.value && { color: '#2979FF', fontWeight: 'bold' }]}>{opt.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </TouchableOpacity>
+        </Modal>
+        {/* Filter Modal */}
+        <Modal visible={showFilter} transparent animationType="fade">
+          <TouchableOpacity style={styles.modalOverlay} onPress={() => setShowFilter(false)}>
+            <View style={styles.modalCard}>
+              <Text style={styles.modalSectionTitle}>Type</Text>
+              <View style={{ flexDirection: 'row', marginBottom: 12 }}>
+                {TYPES.map(type => (
+                  <TouchableOpacity key={type} style={[styles.filterChip, filterType === type && styles.filterChipActive]} onPress={() => setFilterType(filterType === type ? null : type)}>
+                    <Text style={[styles.filterChipText, filterType === type && styles.filterChipTextActive]}>{type}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={styles.modalSectionTitle}>Category</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                {CATEGORIES.map(cat => (
+                  <TouchableOpacity key={cat} style={[styles.filterChip, filterCategory === cat && styles.filterChipActive]} onPress={() => setFilterCategory(filterCategory === cat ? null : cat)}>
+                    <Text style={[styles.filterChipText, filterCategory === cat && styles.filterChipTextActive]}>{cat}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <TouchableOpacity style={styles.clearBtn} onPress={() => { setFilterType(null); setFilterCategory(null); setShowFilter(false); }}>
+                <Text style={styles.clearBtnText}>Clear Filters</Text>
               </TouchableOpacity>
-            ))}
-          </View>
-        </TouchableOpacity>
-      </Modal>
-      {/* Filter Modal */}
-      <Modal visible={showFilter} transparent animationType="fade">
-        <TouchableOpacity style={styles.modalOverlay} onPress={() => setShowFilter(false)}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalSectionTitle}>Type</Text>
-            <View style={{ flexDirection: 'row', marginBottom: 12 }}>
-              {TYPES.map(type => (
-                <TouchableOpacity key={type} style={[styles.filterChip, filterType === type && styles.filterChipActive]} onPress={() => setFilterType(filterType === type ? null : type)}>
-                  <Text style={[styles.filterChipText, filterType === type && styles.filterChipTextActive]}>{type}</Text>
-                </TouchableOpacity>
-              ))}
             </View>
-            <Text style={styles.modalSectionTitle}>Category</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-              {CATEGORIES.map(cat => (
-                <TouchableOpacity key={cat} style={[styles.filterChip, filterCategory === cat && styles.filterChipActive]} onPress={() => setFilterCategory(filterCategory === cat ? null : cat)}>
-                  <Text style={[styles.filterChipText, filterCategory === cat && styles.filterChipTextActive]}>{cat}</Text>
-                </TouchableOpacity>
-              ))}
+          </TouchableOpacity>
+        </Modal>
+        {/* Download Modal */}
+        <Modal visible={showDownload} transparent animationType="fade">
+          <TouchableOpacity style={styles.modalOverlay} onPress={() => setShowDownload(false)}>
+            <View style={styles.modalCard}>
+              <Text style={styles.modalSectionTitle}>Download Options</Text>
+              <Text style={styles.downloadSubtitle}>
+                Download {filtered.length} transaction{filtered.length !== 1 ? 's' : ''} 
+                {filterType && ` (${filterType})`}
+                {filterCategory && ` (${filterCategory})`}
+              </Text>
+              <TouchableOpacity style={styles.downloadBtn} onPress={handleDownloadCSV}>
+                <Ionicons name="document-text-outline" size={20} color="#4caf50" />
+                <Text style={styles.downloadBtnText}>Download as CSV</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.downloadBtn} onPress={handleDownloadPDF}>
+                <Ionicons name="document-outline" size={20} color="#4caf50" />
+                <Text style={styles.downloadBtnText}>Download as Text</Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.clearBtn} onPress={() => { setFilterType(null); setFilterCategory(null); setShowFilter(false); }}>
-              <Text style={styles.clearBtnText}>Clear Filters</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-      {/* Download Modal */}
-      <Modal visible={showDownload} transparent animationType="fade">
-        <TouchableOpacity style={styles.modalOverlay} onPress={() => setShowDownload(false)}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalSectionTitle}>Download Options</Text>
-            <TouchableOpacity style={styles.downloadBtn}>
-              <Text style={styles.downloadBtnText}>Download as CSV</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.downloadBtn}>
-              <Text style={styles.downloadBtnText}>Download as PDF</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+          </TouchableOpacity>
+        </Modal>
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerRow: { flexDirection: 'row', alignItems: 'center', padding: 20, paddingBottom: 0 },
+  bellCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: 'white',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+
+    marginTop: 0,
+    padding: 20,
+  },
   headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#222' },
-  searchRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 10, margin: 20, marginBottom: 10, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: '#E0E0E0' },
+  searchRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 10, marginHorizontal: 20, marginBottom: 10, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: '#E0E0E0' },
   searchInput: { flex: 1, fontSize: 15, color: '#222' },
   actionRow: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 20, marginBottom: 10, gap: 10 },
   actionBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 10, marginRight: 8, borderWidth: 1, borderColor: '#E0E0E0' },
@@ -335,8 +460,9 @@ const styles = StyleSheet.create({
   filterChipTextActive: { color: '#fff' },
   clearBtn: { marginTop: 16, alignSelf: 'flex-end' },
   clearBtnText: { color: '#2979FF', fontWeight: 'bold', fontSize: 15 },
-  downloadBtn: { backgroundColor: '#F5F5F5', borderRadius: 10, padding: 14, marginTop: 10 },
+  downloadBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F5F5', borderRadius: 10, padding: 14, marginTop: 10, gap: 8 },
   downloadBtnText: { color: '#222', fontWeight: 'bold', fontSize: 15 },
+  downloadSubtitle: { fontSize: 14, color: '#666', marginBottom: 10 },
   // Empty state styles
   emptyStateContainer: {
     flex: 1,

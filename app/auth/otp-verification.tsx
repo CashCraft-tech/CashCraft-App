@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from "react-native";
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useRouter, useLocalSearchParams } from "expo-router";
 
 export default function OTPVerification() {
@@ -16,7 +17,13 @@ export default function OTPVerification() {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAwareScrollView
+      contentContainerStyle={styles.container}
+      enableOnAndroid={true}
+      extraScrollHeight={20}
+      keyboardShouldPersistTaps="handled"
+      enableAutomaticScroll={true}
+    >
       <Image source={require("../../assets/images/icon.png")} style={styles.logo} />
       <Text style={styles.title}>OTP Verification</Text>
       <Text style={styles.subtitle}>Enter the 6-digit code sent to {email || "your email"}</Text>
@@ -38,7 +45,7 @@ export default function OTPVerification() {
       <TouchableOpacity>
         <Text style={styles.resendText}>Didn't receive code? Resend</Text>
       </TouchableOpacity>
-    </View>
+    </KeyboardAwareScrollView>
   );
 }
 
@@ -49,6 +56,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
     paddingTop: 40,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   logo: {
     width: 64,

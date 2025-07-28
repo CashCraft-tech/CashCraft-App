@@ -11,9 +11,21 @@ import {
   serverTimestamp,
   limit,
   startAfter,
-  getDoc
+  getDoc,
+  Timestamp
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
+
+// Helper function to safely convert Firestore Timestamp to Date
+const convertTimestampToDate = (timestamp: any): Date => {
+  if (timestamp && typeof timestamp.toDate === 'function') {
+    return timestamp.toDate();
+  }
+  if (timestamp instanceof Date) {
+    return timestamp;
+  }
+  return new Date(timestamp);
+};
 
 export interface Transaction {
   id?: string;
@@ -25,7 +37,7 @@ export interface Transaction {
   amount: number;
   type: 'income' | 'expense';
   description: string;
-  date: Date;
+  date: Date | any; // Allow both Date and Firestore Timestamp
   location?: string;
   notes?: string;
   createdAt?: any;
@@ -47,8 +59,6 @@ export const transactionsService = {
     lastTransaction?: any
   ): Promise<Transaction[]> {
     try {
-      console.log('Fetching transactions for userId:', userId);
-      
       let q = query(
         collection(db, 'transactions'),
         where('userId', '==', userId),
@@ -61,21 +71,18 @@ export const transactionsService = {
       }
 
       const querySnapshot = await getDocs(q);
-      console.log('Query snapshot size:', querySnapshot.size);
       
       const transactions: Transaction[] = [];
       
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        console.log('Transaction data:', data);
         transactions.push({
           id: doc.id,
           ...data,
-          date: data.date.toDate() // Convert Firestore timestamp to Date
+          date: convertTimestampToDate(data.date) // Convert Firestore timestamp to Date
         } as Transaction);
       });
       
-      console.log('Returning transactions:', transactions);
       return transactions;
     } catch (error) {
       console.error('Error fetching transactions:', error);
@@ -93,8 +100,8 @@ export const transactionsService = {
       const q = query(
         collection(db, 'transactions'),
         where('userId', '==', userId),
-        where('date', '>=', startDate),
-        where('date', '<=', endDate),
+        where('date', '>=', Timestamp.fromDate(startDate)),
+        where('date', '<=', Timestamp.fromDate(endDate)),
         orderBy('date', 'desc')
       );
 
@@ -106,7 +113,7 @@ export const transactionsService = {
         transactions.push({
           id: doc.id,
           ...data,
-          date: data.date.toDate()
+          date: convertTimestampToDate(data.date)
         } as Transaction);
       });
       
@@ -122,6 +129,7 @@ export const transactionsService = {
     try {
       const docRef = await addDoc(collection(db, 'transactions'), {
         ...transaction,
+        date: Timestamp.fromDate(transaction.date), // Convert to Firestore Timestamp
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
@@ -137,8 +145,15 @@ export const transactionsService = {
   async updateTransaction(transactionId: string, updates: Partial<Transaction>): Promise<void> {
     try {
       const transactionRef = doc(db, 'transactions', transactionId);
+      
+      // Convert date to Timestamp if it exists in updates
+      const updateData = { ...updates };
+      if (updateData.date) {
+        updateData.date = Timestamp.fromDate(updateData.date as Date);
+      }
+      
       await updateDoc(transactionRef, {
-        ...updates,
+        ...updateData,
         updatedAt: serverTimestamp()
       });
     } catch (error) {
@@ -210,7 +225,7 @@ export const transactionsService = {
         transactions.push({
           id: doc.id,
           ...data,
-          date: data.date.toDate()
+          date: convertTimestampToDate(data.date)
         } as Transaction);
       });
       
@@ -220,4 +235,7 @@ export const transactionsService = {
       throw error;
     }
   }
-}; 
+};
+
+// Default export to satisfy router requirements
+export default transactionsService; 

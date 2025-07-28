@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   TextInput,
   Image,
@@ -11,6 +10,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
@@ -242,11 +242,22 @@ export default function PersonalInformation() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top','left','right','bottom']}>
+        <KeyboardAwareScrollView
+          contentContainerStyle={{
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            paddingHorizontal: 20,
+          }}
+          enableOnAndroid={true}
+          extraScrollHeight={20}
+          keyboardShouldPersistTaps="handled"
+          enableAutomaticScroll={true}
+        >
           <ActivityIndicator size="large" color="#4caf50" />
           <Text style={{ marginTop: 16, color: '#666' }}>Loading your information...</Text>
-        </View>
+        </KeyboardAwareScrollView>
       </SafeAreaView>
     );
   }
@@ -254,9 +265,18 @@ export default function PersonalInformation() {
   // Show empty state if no profile data
   if (!hasProfileData) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Header */}
+      <SafeAreaView style={{ flex: 1 }} edges={['top','left','right','bottom']}>
+        <KeyboardAwareScrollView
+          contentContainerStyle={{
+            paddingTop: 24,
+            paddingBottom: 40,
+            paddingHorizontal: 20,
+          }}
+          enableOnAndroid={true}
+          extraScrollHeight={20}
+          keyboardShouldPersistTaps="handled"
+          enableAutomaticScroll={true}
+        >
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Personal Information</Text>
             <Text style={styles.headerSubtitle}>Complete your profile to get started</Text>
@@ -294,6 +314,7 @@ export default function PersonalInformation() {
                   onChangeText={(text) => updateField('fullName', text)}
                   editable={isEditing}
                   placeholder="Enter your full name"
+                  placeholderTextColor="#888"
                 />
               </View>
             </View>
@@ -310,6 +331,7 @@ export default function PersonalInformation() {
                   editable={isEditing}
                   placeholder="Enter your email"
                   keyboardType="email-address"
+                  placeholderTextColor="#888"
                 />
               </View>
             </View>
@@ -326,6 +348,7 @@ export default function PersonalInformation() {
                   editable={isEditing}
                   placeholder="Enter your phone number"
                   keyboardType="phone-pad"
+                  placeholderTextColor="#888"
                 />
               </View>
             </View>
@@ -340,6 +363,7 @@ export default function PersonalInformation() {
                   onChangeText={(text) => updateField('gender', text)}
                   editable={isEditing}
                   placeholder="Enter your gender"
+                  placeholderTextColor="#888"
                 />
               </View>
             </View>
@@ -354,6 +378,7 @@ export default function PersonalInformation() {
                   onChangeText={(text) => updateField('profession', text)}
                   editable={isEditing}
                   placeholder="Enter your profession"
+                  placeholderTextColor="#888"
                 />
               </View>
             </View>
@@ -367,65 +392,61 @@ export default function PersonalInformation() {
                   value={personalInfo.username}
                   onChangeText={(text) => updateField('username', text)}
                   editable={isEditing}
-                  placeholder="Choose a username"
-                  autoCapitalize="none"
+                  placeholder="Enter your username"
+                  placeholderTextColor="#888"
                 />
               </View>
             </View>
-
-            {/* Action Buttons */}
-            <View style={styles.actionButtonsContainer}>
-              <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
-                {saving ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={styles.saveButtonText}>Save Information</Text>
-                )}
-              </TouchableOpacity>
-            </View>
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Header */}
+    <SafeAreaView style={{ flex: 1 }} edges={['top','left','right','bottom']}>
+      <KeyboardAwareScrollView
+        contentContainerStyle={{
+          paddingTop: 24,
+          paddingBottom: 40,
+          paddingHorizontal: 20,
+        }}
+        enableOnAndroid={true}
+        extraScrollHeight={20}
+        keyboardShouldPersistTaps="handled"
+        enableAutomaticScroll={true}
+      >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Personal Information</Text>
           <Text style={styles.headerSubtitle}>Manage your profile details</Text>
-         
         </View>
 
-        
-
-        {/* Profile Photo Section */}
-        <View style={styles.section}>
-          <View style={styles.profilePhotoContainer}>
-            <View style={styles.profilePhotoWrapper}>
-              {profileImage ? (
-                <Image source={{ uri: profileImage }} style={styles.profileImage} />
-              ) : (
-                <View style={styles.profilePlaceholder}>
-                  <Text style={styles.profileInitials}>
-                    {getInitials(personalInfo.fullName)}
-                  </Text>
-                </View>
-              )}
-              <TouchableOpacity style={styles.cameraIcon} onPress={pickImage}>
-                <Ionicons name="camera" size={16} color="#fff" />
-              </TouchableOpacity>
+        {/* Profile Header */}
+        <View style={styles.profileHeader}>
+          <TouchableOpacity style={styles.avatarContainer} onPress={pickImage}>
+            {profileImage ? (
+              <Image source={{ uri: profileImage }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarText}>{getInitials(personalInfo.fullName)}</Text>
+              </View>
+            )}
+            <View style={styles.editAvatarButton}>
+              <Ionicons name="camera" size={16} color="#fff" />
             </View>
-            <View style={styles.profilePhotoInfo}>
-              <Text style={styles.profilePhotoTitle}>Profile Photo</Text>
-              <Text style={styles.profilePhotoSubtitle}>Update your profile picture</Text>
-              <TouchableOpacity style={styles.changePhotoButton} onPress={pickImage}>
-                <Text style={styles.changePhotoText}>Change Photo</Text>
-              </TouchableOpacity>
-            </View>
+          </TouchableOpacity>
+          
+          <View style={styles.profileInfo}>
+            <Text style={styles.profileName}>{personalInfo.fullName || 'Add your name'}</Text>
+            <Text style={styles.profileEmail}>{personalInfo.email || 'Add your email'}</Text>
           </View>
+          
+          <TouchableOpacity 
+            style={styles.editButton} 
+            onPress={() => setIsEditing(!isEditing)}
+          >
+            <Ionicons name={isEditing ? "checkmark" : "pencil"} size={20} color="#fff" />
+          </TouchableOpacity>
         </View>
 
         {/* Basic Information Section */}
@@ -442,6 +463,7 @@ export default function PersonalInformation() {
                 onChangeText={(text) => updateField('fullName', text)}
                 editable={isEditing}
                 placeholder="Enter your full name"
+                placeholderTextColor="#888"
               />
             </View>
           </View>
@@ -458,6 +480,7 @@ export default function PersonalInformation() {
                 editable={isEditing}
                 placeholder="Enter your email"
                 keyboardType="email-address"
+                placeholderTextColor="#888"
               />
             </View>
           </View>
@@ -474,6 +497,7 @@ export default function PersonalInformation() {
                 editable={isEditing}
                 placeholder="Enter your phone number"
                 keyboardType="phone-pad"
+                placeholderTextColor="#888"
               />
             </View>
           </View>
@@ -488,57 +512,7 @@ export default function PersonalInformation() {
                 onChangeText={(text) => updateField('gender', text)}
                 editable={isEditing}
                 placeholder="Enter your gender"
-              />
-            </View>
-          </View>
-
-          {/* Username */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Username</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={[styles.textInput, !isEditing && styles.disabledInput]}
-                value={personalInfo.username}
-                onChangeText={(text) => updateField('username', text)}
-                editable={isEditing}
-                placeholder="Enter your username"
-                autoCapitalize="none"
-              />
-            </View>
-          </View>
-
-          {/* Date of Birth */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Date of Birth</Text>
-            <View style={styles.inputWrapper}>
-              <MaterialIcons name="event" size={20} color="#666" style={styles.inputIcon} />
-              <TextInput
-                style={[styles.textInput, styles.inputWithIcon, !isEditing && styles.disabledInput]}
-                value={personalInfo.dateOfBirth}
-                onChangeText={(text) => updateField('dateOfBirth', text)}
-                editable={isEditing}
-                placeholder="DD-MM-YYYY"
-              />
-              {isEditing && (
-                <TouchableOpacity style={styles.datePickerIcon}>
-                  <MaterialIcons name="event" size={20} color="#666" />
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-
-          {/* Address */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Address</Text>
-            <View style={styles.inputWrapper}>
-              <Ionicons name="location-outline" size={20} color="#666" style={styles.inputIcon} />
-              <TextInput
-                style={[styles.textInput, styles.inputWithIcon, !isEditing && styles.disabledInput]}
-                value={personalInfo.address}
-                onChangeText={(text) => updateField('address', text)}
-                editable={isEditing}
-                placeholder="Enter your address"
-                multiline
+                placeholderTextColor="#888"
               />
             </View>
           </View>
@@ -553,41 +527,90 @@ export default function PersonalInformation() {
                 onChangeText={(text) => updateField('profession', text)}
                 editable={isEditing}
                 placeholder="Enter your profession"
+                placeholderTextColor="#888"
+              />
+            </View>
+          </View>
+
+          {/* Username */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Username</Text>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={[styles.textInput, !isEditing && styles.disabledInput]}
+                value={personalInfo.username}
+                onChangeText={(text) => updateField('username', text)}
+                editable={isEditing}
+                placeholder="Enter your username"
+                placeholderTextColor="#888"
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* Additional Information Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Additional Information</Text>
+          
+          {/* Address */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Address</Text>
+            <View style={styles.inputWrapper}>
+              <Ionicons name="location-outline" size={20} color="#666" style={styles.inputIcon} />
+              <TextInput
+                style={[styles.textInput, styles.inputWithIcon, !isEditing && styles.disabledInput]}
+                value={personalInfo.address}
+                onChangeText={(text) => updateField('address', text)}
+                editable={isEditing}
+                placeholder="Enter your address"
+                multiline
+                numberOfLines={2}
+                placeholderTextColor="#888"
+              />
+            </View>
+          </View>
+
+          {/* Date of Birth */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Date of Birth</Text>
+            <View style={styles.inputWrapper}>
+              <Ionicons name="calendar-outline" size={20} color="#666" style={styles.inputIcon} />
+              <TextInput
+                style={[styles.textInput, styles.inputWithIcon, !isEditing && styles.disabledInput]}
+                value={personalInfo.dateOfBirth}
+                onChangeText={(text) => updateField('dateOfBirth', text)}
+                editable={isEditing}
+                placeholder="DD/MM/YYYY"
+                placeholderTextColor="#888"
               />
             </View>
           </View>
         </View>
 
         {/* Action Buttons */}
-        <View style={styles.buttonContainer}>
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#4caf50" />
-              <Text style={styles.loadingText}>Loading your information...</Text>
-            </View>
-          ) : !isEditing ? (
-            <TouchableOpacity style={styles.editButton} onPress={() => setIsEditing(true)}>
-              <Text style={styles.editButtonText}>Edit Information</Text>
+        {isEditing && (
+          <View style={styles.actionButtons}>
+            <TouchableOpacity 
+              style={styles.cancelButton} 
+              onPress={handleCancel}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
-          ) : (
-            <View style={styles.actionButtons}>
-              <TouchableOpacity style={styles.cancelButton} onPress={handleCancel} disabled={saving}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
-                {saving ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
-                    <Text style={styles.saveButtonText}>Saving...</Text>
-                  </View>
-                ) : (
-                  <Text style={styles.saveButtonText}>Save Changes</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-      </ScrollView>
+            
+            <TouchableOpacity 
+              style={styles.saveButton} 
+              onPress={handleSave}
+              disabled={saving}
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.saveButtonText}>Save Changes</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }
@@ -844,5 +867,59 @@ const styles = StyleSheet.create({
   },
   actionButtonsContainer: {
     marginTop: 20,
+  },
+  profileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingHorizontal: 10,
+  },
+  avatarContainer: {
+    position: 'relative',
+    marginRight: 15,
+  },
+  avatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+  },
+  avatarPlaceholder: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#667eea',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  editAvatarButton: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#4FC3F7',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  profileName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#101828',
+    marginBottom: 4,
+  },
+  profileEmail: {
+    fontSize: 14,
+    color: '#666',
   },
 }); 
