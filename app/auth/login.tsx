@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ActivityIndicator, Modal } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebaseConfig';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 export default function Login() {
   const router = useRouter();
@@ -67,63 +68,70 @@ export default function Login() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-      <Image source={require("../../assets/images/icon.png")} style={styles.logo} />
-      <Text style={styles.title}>Bachat</Text>
-      </View>
-      <Text style={styles.subtitle}>Smart expense tracking made simple</Text>
+    <KeyboardAwareScrollView
+    contentContainerStyle={styles.container}
+    enableOnAndroid={true}
+    extraScrollHeight={20}
+    keyboardShouldPersistTaps="handled"
+    enableAutomaticScroll={true}
+  >
+      
+        <View style={styles.header}>
+        <Image source={require("../../assets/images/icon.png")} style={styles.logo} />
+        <Text style={styles.title}>Bachat</Text>
+        </View>
+        <Text style={styles.subtitle}>Smart expense tracking made simple</Text>
 
-      <View style={styles.box}>
-      <Text style={styles.title}>Welcome Back</Text>
-      <Text style={styles.subtitle}>Sign in to continue tracking your expenses</Text>
-      <Text style={styles.label}>Email</Text>
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter your email"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-      </View>
-      <Text style={styles.label}>Password</Text>
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter your password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
-      </View>
-      <TouchableOpacity onPress={() => router.push("/auth/forgot-password")}> 
-        <Text style={styles.forgot}>Forgot password?</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.signInButton} onPress={handleSignIn} disabled={loading}>
-        <Text style={styles.signInText}>{loading ? 'Signing In...' : 'Sign In'}</Text>
-      </TouchableOpacity>
-      {error ? <Text style={{ color: 'red', marginBottom: 8 }}>{error}</Text> : null}
-      <View style={styles.orContainer}>
-        <View style={styles.line} />
-        <Text style={styles.orText}>OR</Text>
-        <View style={styles.line} />
-      </View>
-      <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignIn}>
-        <Image source={require("../../assets/images/icon.png")} style={styles.googleLogo} />
-        <Text style={styles.googleText}>Continue with Google</Text>
-      </TouchableOpacity>
-      <View style={styles.signUpContainer}>
-        <Text>Don't have an account? </Text>
-        <TouchableOpacity onPress={() => router.push("/auth/signup")}> 
-          <Text style={styles.signUpText}>Sign Up</Text>
+        <View style={styles.box}>
+        <Text style={styles.title}>Welcome Back</Text>
+        <Text style={styles.subtitle}>Sign in to continue tracking your expenses</Text>
+        <Text style={styles.label}>Email</Text>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your email"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+        </View>
+        <Text style={styles.label}>Password</Text>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+        </View>
+        <TouchableOpacity onPress={() => router.push("/auth/forgot-password")}> 
+          <Text style={styles.forgot}>Forgot password?</Text>
         </TouchableOpacity>
-      </View>
-      </View>
-      <Text style={styles.termsText}>
-        By continuing, you agree to our <Text style={styles.link}>Terms of Service</Text> and <Text style={styles.link}>Privacy Policy</Text>
-      </Text>
+        <TouchableOpacity style={styles.signInButton} onPress={handleSignIn} disabled={loading}>
+          <Text style={styles.signInText}>{loading ? 'Signing In...' : 'Sign In'}</Text>
+        </TouchableOpacity>
+        {error ? <Text style={{ color: 'red', marginBottom: 8 }}>{error}</Text> : null}
+        <View style={styles.orContainer}>
+          <View style={styles.line} />
+          <Text style={styles.orText}>OR</Text>
+          <View style={styles.line} />
+        </View>
+        <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignIn}>
+          <Image source={require("../../assets/images/icon.png")} style={styles.googleLogo} />
+          <Text style={styles.googleText}>Continue with Google</Text>
+        </TouchableOpacity>
+        <View style={styles.signUpContainer}>
+          <Text>Don't have an account? </Text>
+          <TouchableOpacity onPress={() => router.push("/auth/signup")}> 
+            <Text style={styles.signUpText}>Sign Up</Text>
+          </TouchableOpacity>
+        </View>
+        </View>
+        <Text style={styles.termsText}>
+          By continuing, you agree to our <Text style={styles.link}>Terms of Service</Text> and <Text style={styles.link}>Privacy Policy</Text>
+        </Text>
       
       {/* Loading Modal */}
       <Modal
@@ -139,7 +147,7 @@ export default function Login() {
           </View>
         </View>
       </Modal>
-    </View>
+    </KeyboardAwareScrollView>
   );
 }
 
@@ -151,6 +159,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 20,
     paddingTop: 40,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   box: {
     backgroundColor: "white",

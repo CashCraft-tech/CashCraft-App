@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, Platform } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -96,9 +97,18 @@ export default function Feedback() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Header */}
+    <SafeAreaView style={{ flex: 1 }} edges={['top','left','right','bottom']}>
+      <KeyboardAwareScrollView
+        contentContainerStyle={{
+       
+          paddingBottom: 40,
+         
+        }}
+        enableOnAndroid={true}
+        extraScrollHeight={20}
+        keyboardShouldPersistTaps="handled"
+        enableAutomaticScroll={true}
+      >
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#333" />
@@ -162,6 +172,7 @@ export default function Feedback() {
               placeholder="Brief summary of your feedback"
               value={title}
               onChangeText={setTitle}
+              placeholderTextColor="#888"
             />
           </View>
 
@@ -175,56 +186,28 @@ export default function Feedback() {
               multiline
               numberOfLines={6}
               textAlignVertical="top"
+              placeholderTextColor="#888"
             />
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Email (optional)</Text>
+            <Text style={styles.inputLabel}>Email (Optional)</Text>
             <TextInput
               style={styles.textInput}
-              placeholder="your.email@example.com"
+              placeholder="Your email for follow-up"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              placeholderTextColor="#888"
             />
-            <Text style={styles.inputHint}>
-              We'll use this to follow up on your feedback
-            </Text>
           </View>
-        </View>
 
-        {/* Submit Button */}
-        <View style={styles.submitSection}>
-          <TouchableOpacity 
-            style={[
-              styles.submitButton,
-              (!selectedType || !title.trim() || !description.trim()) && styles.submitButtonDisabled
-            ]} 
-            onPress={handleSubmit}
-            disabled={!selectedType || !title.trim() || !description.trim()}
-          >
+          <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
             <Text style={styles.submitButtonText}>Submit Feedback</Text>
           </TouchableOpacity>
         </View>
-
-        {/* Additional Info */}
-        <View style={styles.additionalInfo}>
-          <Text style={styles.additionalInfoTitle}>What happens next?</Text>
-          <View style={styles.infoItem}>
-            <MaterialIcons name="check-circle" size={16} color="#4caf50" />
-            <Text style={styles.infoText}>We review all feedback within 48 hours</Text>
-          </View>
-          <View style={styles.infoItem}>
-            <MaterialIcons name="check-circle" size={16} color="#4caf50" />
-            <Text style={styles.infoText}>Bug reports are prioritized for fixes</Text>
-          </View>
-          <View style={styles.infoItem}>
-            <MaterialIcons name="check-circle" size={16} color="#4caf50" />
-            <Text style={styles.infoText}>Feature requests are considered for future updates</Text>
-          </View>
-        </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }

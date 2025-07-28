@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, FlatList, Platform, Alert, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, FlatList, Platform, Alert, ActivityIndicator } from "react-native";
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { categoriesService, Category } from '../services/categoriesService';
 import { transactionsService } from '../services/transactionsService';
 import { useAuth } from '../context/AuthContext';
+import { router } from 'expo-router';
+import { sendNotification } from '../services/notificationService';
 
 const PAYMENT_TYPES = [
   { label: 'Cash', icon: <FontAwesome5 name="money-bill-wave" size={20} color="#43A047" /> },
@@ -127,6 +130,13 @@ export default function Add() {
       };
 
       await transactionsService.addTransaction(transaction);
+      // Send notification for transaction added
+      await sendNotification({
+        userId: user.uid,
+        title: 'Transaction Added',
+        body: `Your transaction "${title}" was added successfully.`,
+        icon: selectedCategory.icon || 'checkmark-circle-outline',
+      });
       Alert.alert('Success', 'Transaction added successfully!');
       
       // Reset form
@@ -162,156 +172,178 @@ export default function Add() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#F8F9FB' }}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={styles.label}>Transaction Type</Text>
-        <View style={styles.toggleRow}>
-          <TouchableOpacity
-            style={[styles.toggleBtn, transactionType === 'Expense' && styles.toggleBtnActive]}
-            onPress={() => setTransactionType('Expense')}
-          >
-            <Ionicons name="remove-circle" size={24} color={transactionType === 'Expense' ? '#FF5252' : '#ccc'} />
-            <Text style={[styles.toggleBtnText, transactionType === 'Expense' && styles.toggleBtnTextActive]}>Expense</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.toggleBtn, transactionType === 'Income' && styles.toggleBtnActive]}
-            onPress={() => setTransactionType('Income')}
-          >
-            <Ionicons name="add-circle" size={24} color={transactionType === 'Income' ? '#43A047' : '#ccc'} />
-            <Text style={[styles.toggleBtnText, transactionType === 'Income' && styles.toggleBtnTextActive]}>Income</Text>
-          </TouchableOpacity>
+    <SafeAreaView style={{ flex: 1, }} edges={['top','left','right','bottom']}>
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.scrollContent}
+        enableOnAndroid={true}
+        extraScrollHeight={20}
+        keyboardShouldPersistTaps="handled"
+        enableAutomaticScroll={true}
+      >
+        <View style={{ marginBottom: 24, marginTop: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View>
+            <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#222', marginBottom: 4 }}>Add Transaction</Text>
+            <Text style={{ fontSize: 14, color: '#666' }}>Log your expense or income below</Text>
+          </View>
+          <View style={styles.bellCircle}>
+            <TouchableOpacity onPress={() => router.push('/components/notifications')}>
+              <Ionicons name="notifications-outline" size={25} color="#B0B0B0" />
+            </TouchableOpacity>
+          </View>
         </View>
-
-        {/* Payment Type Dropdown */}
-        <Text style={styles.label}>Payment Type</Text>
-        <TouchableOpacity style={styles.dropdown} onPress={() => setPaymentDropdown(!paymentDropdown)}>
-          <Text style={styles.dropdownText}>{paymentType || 'Select Payment Type'}</Text>
-          <Ionicons name={paymentDropdown ? 'chevron-up' : 'chevron-down'} size={20} color="#888" />
-        </TouchableOpacity>
-        {paymentDropdown && (
-          <View style={styles.dropdownList}>
-            {PAYMENT_TYPES.map((item) => (
-              <TouchableOpacity
-                key={item.label}
-                style={styles.dropdownItem}
-                onPress={() => { setPaymentType(item.label); setPaymentDropdown(false); }}
-              >
-                {item.icon}
-                <Text style={styles.dropdownItemText}>{item.label}</Text>
-              </TouchableOpacity>
-            ))}
+          <Text style={styles.label}>Transaction Type</Text>
+          <View style={styles.toggleRow}>
+            <TouchableOpacity
+              style={[styles.toggleBtn, transactionType === 'Expense' && styles.toggleBtnActive]}
+              onPress={() => setTransactionType('Expense')}
+            >
+              <Ionicons name="remove-circle" size={24} color={transactionType === 'Expense' ? '#FF5252' : '#ccc'} />
+              <Text style={[styles.toggleBtnText, transactionType === 'Expense' && styles.toggleBtnTextActive]}>Expense</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.toggleBtn, transactionType === 'Income' && styles.toggleBtnActive]}
+              onPress={() => setTransactionType('Income')}
+            >
+              <Ionicons name="add-circle" size={24} color={transactionType === 'Income' ? '#43A047' : '#ccc'} />
+              <Text style={[styles.toggleBtnText, transactionType === 'Income' && styles.toggleBtnTextActive]}>Income</Text>
+            </TouchableOpacity>
           </View>
-        )}
 
-        {/* Category Dropdown */}
-        <Text style={styles.label}>Category</Text>
-        <TouchableOpacity style={styles.dropdown} onPress={() => setCategoryDropdown(!categoryDropdown)}>
-          <Text style={styles.dropdownText}>{category || 'Select a category'}</Text>
-          <Ionicons name={categoryDropdown ? 'chevron-up' : 'chevron-down'} size={20} color="#888" />
-        </TouchableOpacity>
-        {categoryDropdown && (
-          <View style={styles.dropdownList}>
-            {categories.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.dropdownItem}
-                onPress={() => { setCategory(item.name); setSelectedCategory(item); setCategoryDropdown(false); }}
-              >
-                {getIconComponent(item.icon, item.color)}
-                <Text style={styles.dropdownItemText}>{item.name}</Text>
-              </TouchableOpacity>
-            ))}
+          {/* Payment Type Dropdown */}
+          <Text style={styles.label}>Payment Type</Text>
+          <TouchableOpacity style={styles.dropdown} onPress={() => setPaymentDropdown(!paymentDropdown)}>
+            <Text style={styles.dropdownText}>{paymentType || 'Select Payment Type'}</Text>
+            <Ionicons name={paymentDropdown ? 'chevron-up' : 'chevron-down'} size={20} color="#888" />
+          </TouchableOpacity>
+          {paymentDropdown && (
+            <View style={styles.dropdownList}>
+              {PAYMENT_TYPES.map((item) => (
+                <TouchableOpacity
+                  key={item.label}
+                  style={styles.dropdownItem}
+                  onPress={() => { setPaymentType(item.label); setPaymentDropdown(false); }}
+                >
+                  {item.icon}
+                  <Text style={styles.dropdownItemText}>{item.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {/* Category Dropdown */}
+          <Text style={styles.label}>Category</Text>
+          <TouchableOpacity style={styles.dropdown} onPress={() => setCategoryDropdown(!categoryDropdown)}>
+            <Text style={styles.dropdownText}>{category || 'Select a category'}</Text>
+            <Ionicons name={categoryDropdown ? 'chevron-up' : 'chevron-down'} size={20} color="#888" />
+          </TouchableOpacity>
+          {categoryDropdown && (
+            <View style={styles.dropdownList}>
+              {categories.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.dropdownItem}
+                  onPress={() => { setCategory(item.name); setSelectedCategory(item); setCategoryDropdown(false); }}
+                >
+                  {getIconComponent(item.icon, item.color)}
+                  <Text style={styles.dropdownItemText}>{item.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {/* Amount */}
+          <Text style={styles.label}>Amount</Text>
+          <View style={styles.amountRow}>
+            <Text style={styles.currency}>₹</Text>
+            <TextInput
+              style={styles.amountInput}
+              placeholder="0.00"
+              keyboardType="numeric"
+              value={amount}
+              onChangeText={setAmount}
+            />
           </View>
-        )}
 
-        {/* Amount */}
-        <Text style={styles.label}>Amount</Text>
-        <View style={styles.amountRow}>
-          <Text style={styles.currency}>₹</Text>
+          {/* Title */}
+          <Text style={styles.label}>Title</Text>
           <TextInput
-            style={styles.amountInput}
-            placeholder="0.00"
-            keyboardType="numeric"
-            value={amount}
-            onChangeText={setAmount}
+            style={styles.input}
+            placeholder="e.g., Lunch at restaurant"
+            value={title}
+            onChangeText={setTitle}
           />
-        </View>
 
-        {/* Title */}
-        <Text style={styles.label}>Title</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g., Lunch at restaurant"
-          value={title}
-          onChangeText={setTitle}
-        />
+          {/* Description */}
+          <Text style={styles.label}>Description</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Add any additional notes..."
+            value={description}
+            onChangeText={setDescription}
+          />
 
-        {/* Description */}
-        <Text style={styles.label}>Description</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Add any additional notes..."
-          value={description}
-          onChangeText={setDescription}
-        />
-
-        {/* Date & Time */}
-        <View style={styles.row}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.label}>Date</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="DD-MM-YYYY"
-              value={date}
-              onChangeText={text => setDate(formatDateInput(text))}
-              keyboardType="numeric"
-              maxLength={10}
-            />
-            {dateError ? <Text style={{ color: '#FF5252', fontSize: 13, marginTop: 2 }}>{dateError}</Text> : null}
+          {/* Date & Time */}
+          <View style={styles.row}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>Date</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="DD-MM-YYYY"
+                value={date}
+                onChangeText={text => setDate(formatDateInput(text))}
+                keyboardType="numeric"
+                maxLength={10}
+              />
+              {dateError ? <Text style={{ color: '#FF5252', fontSize: 13, marginTop: 2 }}>{dateError}</Text> : null}
+            </View>
+            <View style={{ width: 16 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>Time</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="HH:MM"
+                value={time}
+                onChangeText={text => setTime(formatTimeInput(text))}
+                keyboardType="numeric"
+                maxLength={5}
+              />
+              {timeError ? <Text style={{ color: '#FF5252', fontSize: 13, marginTop: 2 }}>{timeError}</Text> : null}
+            </View>
           </View>
-          <View style={{ width: 16 }} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.label}>Time</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="HH:MM"
-              value={time}
-              onChangeText={text => setTime(formatTimeInput(text))}
-              keyboardType="numeric"
-              maxLength={5}
-            />
-            {timeError ? <Text style={{ color: '#FF5252', fontSize: 13, marginTop: 2 }}>{timeError}</Text> : null}
+
+          {/* Receipt Upload */}
+          <Text style={styles.label}>Receipt <Text style={{ color: '#888' }}>(Optional)</Text></Text>
+          <TouchableOpacity style={styles.receiptBox}>
+            <Ionicons name="cloud-upload-outline" size={32} color="#B0B0B0" />
+            <Text style={styles.receiptText}>Add Receipt</Text>
+            <Text style={styles.receiptSub}>Take a photo or upload from gallery</Text>
+          </TouchableOpacity>
+
+          {/* Action Buttons */}
+          <View style={styles.actionRow}>
+            <TouchableOpacity style={styles.cancelBtn}>
+              <Text style={styles.cancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.saveBtn, !canSave && { backgroundColor: '#E0E0E0' }]} disabled={!canSave || loading} onPress={handleSaveTransaction}>
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.saveBtnText}>Save Transaction</Text>
+              )}
+            </TouchableOpacity>
           </View>
-        </View>
-
-        {/* Receipt Upload */}
-        <Text style={styles.label}>Receipt <Text style={{ color: '#888' }}>(Optional)</Text></Text>
-        <TouchableOpacity style={styles.receiptBox}>
-          <Ionicons name="cloud-upload-outline" size={32} color="#B0B0B0" />
-          <Text style={styles.receiptText}>Add Receipt</Text>
-          <Text style={styles.receiptSub}>Take a photo or upload from gallery</Text>
-        </TouchableOpacity>
-
-        {/* Action Buttons */}
-        <View style={styles.actionRow}>
-          <TouchableOpacity style={styles.cancelBtn}>
-            <Text style={styles.cancelBtnText}>Cancel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.saveBtn, !canSave && { backgroundColor: '#E0E0E0' }]} disabled={!canSave || loading} onPress={handleSaveTransaction}>
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.saveBtnText}>Save Transaction</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContent: { padding: 20, paddingBottom: 40 },
+  scrollContent: { 
+    paddingTop: 24, 
+    paddingBottom: 80, // extra space for tab bar
+    paddingHorizontal: 20, 
+    backgroundColor: '#F8F9FB'
+  },
   label: { fontSize: 14, color: '#222', fontWeight: 'bold', marginBottom: 6, marginTop: 16 },
   toggleRow: { flexDirection: 'row', backgroundColor: '#F5F5F5', borderRadius: 16, padding: 4, marginBottom: 12 },
   toggleBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, borderRadius: 12 },
@@ -338,4 +370,17 @@ const styles = StyleSheet.create({
   cancelBtnText: { color: '#222', fontWeight: 'bold', fontSize: 16 },
   saveBtn: { flex: 1, backgroundColor: '#222', borderRadius: 8, paddingVertical: 16, alignItems: 'center', marginLeft: 4 },
   saveBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  bellCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: 'white',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
 }); 

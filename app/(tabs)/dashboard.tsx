@@ -293,8 +293,9 @@ export default function Dashboard() {
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <View style={styles.bellCircle}>
-              <Ionicons name="notifications-outline" size={20} color="#B0B0B0" />
-             
+              <TouchableOpacity onPress={() => router.push('/components/notifications')}>
+                <Ionicons name="notifications-outline" size={20} color="#B0B0B0" />
+              </TouchableOpacity>
             </View>
           
           </View>
@@ -436,12 +437,12 @@ export default function Dashboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
+    
   },
   scrollContent: {
     padding: 20,
     paddingBottom: 100, // Increased padding to account for tab bar
-    marginTop: 16,
+ 
     backgroundColor: '#F8F9FB',
   },
   headerRow: {
@@ -464,7 +465,7 @@ const styles = StyleSheet.create({
     color: '#222',
   },
   headerSubtitle: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#888',
     marginBottom: 2,
   },
@@ -473,12 +474,17 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   bellCircle: {
-    width: 32,
-    height: 32,
+    width: 52,
+    height: 52,
     borderRadius: 16,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: 'white',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   headerDot: {
     position: 'absolute',

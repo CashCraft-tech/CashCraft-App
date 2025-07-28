@@ -2,6 +2,7 @@ import { View } from 'react-native';
 import { Tabs } from "expo-router";
 import { Ionicons, MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
 import { Platform } from "react-native";
+import NotificationScreen from '../components/notifications';
 
 export default function RootLayout() 
 {
