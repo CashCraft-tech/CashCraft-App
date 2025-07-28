@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, Platform, ActivityIndicator } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { feedbackService } from '../services/supportService';
+import { useAuth } from '../context/AuthContext';
 
 interface FeedbackType {
   id: string;
@@ -45,35 +47,54 @@ const feedbackTypes: FeedbackType[] = [
 ];
 
 export default function Feedback() {
+  const { user } = useAuth();
   const [selectedType, setSelectedType] = useState<string>('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [email, setEmail] = useState('');
   const [rating, setRating] = useState<number>(0);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedType || !title.trim() || !description.trim()) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
 
-    Alert.alert(
-      'Feedback Submitted',
-      'Thank you for your feedback! We appreciate your input and will review it carefully.',
-      [
-        {
-          text: 'OK',
-          onPress: () => {
-            setSelectedType('');
-            setTitle('');
-            setDescription('');
-            setEmail('');
-            setRating(0);
-            router.back();
+    setLoading(true);
+    try {
+      await feedbackService.submitFeedback({
+        userId: user?.uid || undefined,
+        userEmail: email.trim() || user?.email || undefined,
+        feedbackType: selectedType as 'bug' | 'feature' | 'general' | 'praise',
+        title: title.trim(),
+        description: description.trim(),
+        rating: rating > 0 ? rating : undefined
+      });
+
+      Alert.alert(
+        'Feedback Submitted',
+        'Thank you for your feedback! We appreciate your input and will review it carefully.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              setSelectedType('');
+              setTitle('');
+              setDescription('');
+              setEmail('');
+              setRating(0);
+              router.back();
+            }
           }
-        }
-      ]
-    );
+        ]
+      );
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      Alert.alert('Error', 'Failed to submit feedback. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderStars = () => {
@@ -203,8 +224,12 @@ export default function Feedback() {
             />
           </View>
 
-          <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-            <Text style={styles.submitButtonText}>Submit Feedback</Text>
+          <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} disabled={loading}>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.submitButtonText}>Submit Feedback</Text>
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAwareScrollView>
