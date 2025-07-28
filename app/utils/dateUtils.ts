@@ -45,4 +45,12 @@ export const formatDateShort = (date: Date | string): string => {
   };
 
   return `${day}${getOrdinalSuffix(day)} ${month}, ${year}`;
-}; 
+};
+
+// Default export to satisfy router requirements
+const DateUtils = {
+  formatDate,
+  formatDateShort
+};
+
+export default DateUtils; 

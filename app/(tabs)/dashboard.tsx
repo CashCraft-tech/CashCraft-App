@@ -94,21 +94,64 @@ export default function Dashboard() {
     try {
       setLoading(true);
       
-      // Fetch categories and their spending
+      // Calculate date range based on selected period
+      const now = new Date();
+      let startDate: Date;
+      
+      switch (period) {
+        case 'Daily':
+          // Start of today (00:00:00.000)
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+          break;
+        case 'Weekly':
+          // Get start of current week (Monday 00:00:00.000)
+          const dayOfWeek = now.getDay();
+          const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Sunday = 0, so convert to Monday = 0
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysFromMonday, 0, 0, 0, 0);
+          break;
+        case 'Monthly':
+          // Start of current month (00:00:00.000)
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+          break;
+        default:
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      }
+      
+      // Set end date to end of current day (23:59:59.999)
+      const endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      
+      // Fetch all categories (both income and expense)
       const userCategories = await categoriesService.getUserCategories(user.uid);
       const expenseCategories = userCategories.filter(cat => cat.type === 'expense');
+      const incomeCategories = userCategories.filter(cat => cat.type === 'income');
       
-      // For now, we'll use placeholder values since we need to calculate spending per category
-      const categoriesWithSpending: Category[] = expenseCategories.map(cat => ({
-        label: cat.name,
-        color: cat.color,
-        value: Math.random() * 500, // Placeholder - you'll need to calculate actual spending
-        icon: getIconComponent(cat.icon, cat.color, 20)
-      }));
+      // Get ALL transactions for the selected period (both income and expense)
+      const periodTransactions = await transactionsService.getTransactionsByDateRange(user.uid, startDate, endDate);
+      
+      // Separate income and expense transactions
+      const expenseTransactions = periodTransactions.filter(t => t.type === 'expense');
+      const incomeTransactions = periodTransactions.filter(t => t.type === 'income');
+      
+      console.log(`Dashboard ${period}: Found ${periodTransactions.length} total transactions (${incomeTransactions.length} income, ${expenseTransactions.length} expense)`);
+      
+      // Calculate spending per expense category for the selected period
+      const categoriesWithSpending: Category[] = expenseCategories.map(cat => {
+        const categoryTransactions = expenseTransactions.filter(
+          transaction => transaction.categoryId === cat.id
+        );
+        const totalSpent = categoryTransactions.reduce((sum, transaction) => sum + transaction.amount, 0);
+        
+        return {
+          label: cat.name,
+          color: cat.color,
+          value: totalSpent,
+          icon: getIconComponent(cat.icon, cat.color, 20)
+        };
+      }).filter(cat => cat.value > 0); // Only show categories with spending
       
       setCategories(categoriesWithSpending);
       
-      // Calculate top spending categories
+      // Calculate top spending categories for the selected period
       const sortedCategories = [...categoriesWithSpending].sort((a, b) => b.value - a.value);
       const maxValue = sortedCategories[0]?.value || 1;
       
@@ -122,8 +165,18 @@ export default function Dashboard() {
       
       setTopSpending(topSpendingData);
       
-      // Fetch overall stats
-      const userStats = await transactionsService.getTransactionStats(user.uid);
+      // Calculate stats manually to ensure accuracy
+      const totalIncome = incomeTransactions.reduce((sum, t) => sum + t.amount, 0);
+      const totalExpense = expenseTransactions.reduce((sum, t) => sum + t.amount, 0);
+      const balance = totalIncome - totalExpense;
+      
+      const userStats: TransactionStats = {
+        totalIncome,
+        totalExpense,
+        balance,
+        transactionCount: periodTransactions.length
+      };
+      
       setStats(userStats);
       
     } catch (error) {
@@ -135,7 +188,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchData();
-  }, [user]);
+  }, [user, period]); // Add period as dependency to refetch when period changes
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -272,6 +325,28 @@ export default function Dashboard() {
           ))}
         </View>
 
+        {/* Summary Stats */}
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryRow}>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Income</Text>
+              <Text style={[styles.summaryValue, { color: '#4CAF50' }]}>₹{stats.totalIncome.toFixed(0)}</Text>
+            </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Expense</Text>
+              <Text style={[styles.summaryValue, { color: '#F44336' }]}>₹{stats.totalExpense.toFixed(0)}</Text>
+            </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Balance</Text>
+              <Text style={[styles.summaryValue, { color: stats.balance >= 0 ? '#2196F3' : '#F44336' }]}>
+                ₹{stats.balance.toFixed(0)}
+              </Text>
+            </View>
+          </View>
+        </View>
+
         {/* Spending by Category */}
         <Text style={styles.sectionTitle}>Spending by Category</Text>
         {categories.length > 0 ? (
@@ -279,8 +354,9 @@ export default function Dashboard() {
             <View style={styles.donutRow}>
               <DonutChart data={categories} total={totalSpent} />
               <View style={styles.donutCenter}>
-                <Text style={styles.donutAmount}>₹{totalSpent}</Text>
+                <Text style={styles.donutAmount}>₹{totalSpent.toFixed(0)}</Text>
                 <Text style={styles.donutLabel}>Total Spent</Text>
+                <Text style={styles.donutPeriod}>{period === 'Daily' ? 'Today' : period === 'Weekly' ? 'This Week' : 'This Month'}</Text>
               </View>
             </View>
             <View style={styles.legendGrid}>
@@ -322,7 +398,7 @@ export default function Dashboard() {
                   <View style={styles.topIcon}>{cat.icon}</View>
                   <View>
                     <Text style={styles.topLabel}>{cat.label}</Text>
-                    <Text style={styles.topSub}>This month</Text>
+                    <Text style={styles.topSub}>{period === 'Daily' ? 'Today' : period === 'Weekly' ? 'This week' : 'This month'}</Text>
                   </View>
                 </View>
                 <View style={styles.topRight}>
@@ -517,6 +593,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#888',
   },
+  donutPeriod: {
+    fontSize: 11,
+    color: '#888',
+    marginTop: 2,
+  },
   legendGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -615,6 +696,41 @@ const styles = StyleSheet.create({
   topBarFill: {
     height: 6,
     borderRadius: 3,
+  },
+  // Summary Card Styles
+  summaryCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 18,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  summaryItem: {
+    alignItems: 'center',
+  },
+  summaryLabel: {
+    fontSize: 13,
+    color: '#888',
+    marginBottom: 4,
+  },
+  summaryValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#222',
+  },
+  summaryDivider: {
+    width: 1,
+    height: '80%',
+    backgroundColor: '#E0E0E0',
   },
   // Empty state styles
   emptyStateContainer: {

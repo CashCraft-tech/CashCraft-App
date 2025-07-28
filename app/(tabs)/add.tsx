@@ -109,7 +109,9 @@ export default function Add() {
       // Parse date and time
       const [dd, mm, yyyy] = date.split('-');
       const [hh, mm_time] = time.split(':');
-      const transactionDate = new Date(parseInt(yyyy), parseInt(mm) - 1, parseInt(dd), parseInt(hh), parseInt(mm_time));
+      const transactionDate = new Date(parseInt(yyyy), parseInt(mm) - 1, parseInt(dd), parseInt(hh), parseInt(mm_time), 0, 0);
+
+      console.log('Creating transaction with date:', transactionDate.toISOString());
 
       const transaction = {
         userId: user.uid,
