@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Image, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, Keyboard } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Image, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, Keyboard, Alert } from "react-native";
 import { useRouter } from "expo-router";
-import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../firebaseConfig';
+import { db } from '../firebaseConfig';
+import { authService } from "../services/authService";
 import { categoriesService } from '../services/categoriesService';
 import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+
 
 
 export default function Signup() {
@@ -24,6 +27,7 @@ export default function Signup() {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
@@ -58,8 +62,9 @@ export default function Signup() {
       return;
     }
     
-    if (form.password.length < 6) {
-      setError('Password should be at least 6 characters long');
+    const passwordValidation = authService.validatePassword(form.password);
+    if (!passwordValidation.isValid) {
+      setError(passwordValidation.message);
       return;
     }
     
@@ -68,67 +73,58 @@ export default function Signup() {
       console.log('Attempting to create account for:', form.email);
       
       // Create user with Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, form.email, form.password);
-      const user = userCredential.user;
-      console.log('User created successfully:', user.uid);
+      const result = await authService.signUp(form.email, form.password);
       
-      // Save user profile to Firestore
-      const userProfile = {
-        uid: user.uid,
-        email: form.email,
-        fullName: form.fullName,
-        phone: form.phone,
-        gender: form.gender,
-        profession: form.profession,
-        username: form.username,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      
-      await setDoc(doc(db, 'users', user.uid), userProfile);
-      console.log('User profile saved to Firestore');
-      
-      // Create default categories for the new user
-      await categoriesService.createDefaultCategories(user.uid);
-      console.log('Default categories created');
-      
-      setSuccess("Account created successfully!");
-      setTimeout(() => router.push("/auth/login"), 2000);
+      if (result.success && result.user) {
+        const user = result.user;
+        console.log('User created successfully:', user.uid);
+        
+        // Save user profile to Firestore
+        const userProfile = {
+          uid: user.uid,
+          email: form.email,
+          fullName: form.fullName,
+          phone: form.phone,
+          gender: form.gender,
+          profession: form.profession,
+          username: form.username,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        
+        await setDoc(doc(db, 'users', user.uid), userProfile);
+        console.log('User profile saved to Firestore');
+        
+        // Create default categories for the new user
+        await categoriesService.createDefaultCategories(user.uid);
+        console.log('Default categories created');
+        
+        setSuccess("Account created successfully!");
+        setTimeout(() => router.push("/auth/login"), 2000);
+      } else {
+        setError(result.error?.message || 'Signup failed. Please try again.');
+      }
     } catch (err: any) {
       console.error('Signup error:', err);
-      let errorMessage = 'Signup failed. Please try again.';
-      
-      // Handle specific Firebase auth errors
-      switch (err.code) {
-        case 'auth/email-already-in-use':
-          errorMessage = 'An account with this email already exists.';
-          break;
-        case 'auth/invalid-email':
-          errorMessage = 'Invalid email address.';
-          break;
-        case 'auth/weak-password':
-          errorMessage = 'Password should be at least 6 characters long.';
-          break;
-        case 'auth/network-request-failed':
-          errorMessage = 'Network error. Please check your connection.';
-          break;
-        default:
-          errorMessage = err.message || 'Signup failed. Please try again.';
-      }
-      
-      setError(errorMessage);
+      setError('Signup failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
+
+
   return (
-    <SafeAreaView style={{ flex: 1,backgroundColor: "#eaf7ec" }}>
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+    <LinearGradient
+    colors={['#002219', '#008361', '#002219']}
+    style={styles.gradientContainer}
     >
+      <SafeAreaView style={{ flex: 1 }}>
+        <KeyboardAvoidingView 
+          style={styles.container} 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        >
       <ScrollView 
         ref={scrollViewRef}
         contentContainerStyle={styles.scrollContent} 
@@ -138,7 +134,7 @@ export default function Signup() {
       >
         <View style={styles.header}>
           <Image source={require("../../assets/images/icon.png")} style={styles.logo} />
-          <Text style={styles.title}>Bachat</Text>
+          <Text style={styles.title}>CashCraft</Text>
         </View>
         <Text style={styles.subtitle}>Smart expense tracking made simple</Text>
 
@@ -172,18 +168,28 @@ export default function Signup() {
             />
           </View>
 
-          <Text style={styles.label}>Password *</Text>
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Create a password (min 6 characters)"
-              value={form.password}
-              onChangeText={v => handleChange("password", v)}
-              secureTextEntry
-              placeholderTextColor="#888"
-              onFocus={handleInputFocus}
-            />
-          </View>
+                     <Text style={styles.label}>Password *</Text>
+           <View style={styles.inputContainer}>
+             <TextInput
+               style={styles.input}
+               placeholder="Create a password (min 6 characters)"
+               value={form.password}
+               onChangeText={v => handleChange("password", v)}
+               secureTextEntry={!showPassword}
+               placeholderTextColor="#888"
+               onFocus={handleInputFocus}
+             />
+             <TouchableOpacity
+               onPress={() => setShowPassword(!showPassword)}
+               style={styles.eyeIcon}
+             >
+               <Ionicons
+                 name={showPassword ? "eye-off" : "eye"}
+                 size={20}
+                 color="#666"
+               />
+             </TouchableOpacity>
+           </View>
 
           <Text style={styles.label}>Phone Number</Text>
           <View style={styles.inputContainer}>
@@ -252,6 +258,8 @@ export default function Signup() {
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
           {success ? <Text style={styles.successText}>{success}</Text> : null}
           
+
+          
           <View style={styles.loginContainer}>
             <Text style={styles.loginPrompt}>Already have an account? </Text>
             <TouchableOpacity onPress={() => router.push("/auth/login")}> 
@@ -279,15 +287,18 @@ export default function Signup() {
           </View>
         </View>
       </Modal>
-    </KeyboardAvoidingView>
-    </SafeAreaView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradientContainer: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: "#eaf7ec",
   },
   scrollContent: {
     flexGrow: 1,
@@ -299,7 +310,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   header: {
-    flexDirection: "row",
+    flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 8,
@@ -308,18 +319,19 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     marginHorizontal: 20,
-    marginVertical: 20,
+   
   },
   title: {
     fontSize: 28,
     fontWeight: "bold",
     marginTop: 10,
+    color: "white",
     marginBottom: 4,
     textAlign: "center",
   },
   subtitle: {
     fontSize: 15,
-    color: "#4caf50",
+    color: "white",
     marginBottom: 24,
     textAlign: "center",
   },
@@ -375,6 +387,9 @@ const styles = StyleSheet.create({
     height: 48,
     fontSize: 16,
     color: "#333",
+  },
+  eyeIcon: {
+    padding: 8,
   },
   genderContainer: {
     flexDirection: "row",
@@ -499,4 +514,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
+
 }); 

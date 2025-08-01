@@ -11,13 +11,12 @@ import { formatDateShort } from '../utils/dateUtils';
 import { getDoc, doc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { StatusBar } from 'expo-status-bar';
-import { sendNotification } from '../services/notificationService';
+import { notificationService } from '../services/notificationService';
 import Constants from 'expo-constants';
 
 declare global {
   interface Window {
     __sentLowBalanceNotif?: boolean;
-    __sentAppUpdateNotif?: boolean;
   }
 }
 
@@ -82,12 +81,7 @@ export default function Home() {
         userStats.balance <= 0.1 * userStats.totalIncome &&
         !window.__sentLowBalanceNotif
       ) {
-        await sendNotification({
-          userId: user.uid,
-          title: 'Balance Low',
-          body: 'Your balance is below 10% of your total income. Consider reviewing your spending.',
-          icon: 'alert-circle-outline',
-        });
+        await notificationService.sendLowBalanceAlert();
         window.__sentLowBalanceNotif = true;
       }
       
@@ -103,21 +97,7 @@ export default function Home() {
       
       setCategorySpending(spendingByCategory);
       
-      // Check for app update (placeholder: compare to hardcoded latest version)
-      const currentVersion = (Constants.manifest as any)?.version ?? '1.0.0';
-      const latestVersion = '1.0.1'; // Replace with remote config or API in production
-      if (
-        currentVersion !== latestVersion &&
-        !window.__sentAppUpdateNotif
-      ) {
-        await sendNotification({
-          userId: user.uid,
-          title: 'App Update Available',
-          body: 'A new version of Bachat is available. Please update for the best experience.',
-          icon: 'cloud-download-outline',
-        });
-        window.__sentAppUpdateNotif = true;
-      }
+      // No app update notification - only low balance alerts
       
       setFirebaseStatus('Firebase Connected! ✅');
     } catch (error) {

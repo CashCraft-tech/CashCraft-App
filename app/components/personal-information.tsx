@@ -289,7 +289,7 @@ export default function PersonalInformation() {
             </View>
             <Text style={styles.emptyStateTitle}>Complete Your Profile</Text>
             <Text style={styles.emptyStateMessage}>
-              Add your personal information to personalize your Bachat experience. 
+              Add your personal information to personalize your CashCraft experience. 
               Your profile helps us provide better insights and recommendations.
             </Text>
             <TouchableOpacity 
@@ -766,8 +766,8 @@ const styles = StyleSheet.create({
   },
   editButton: {
     backgroundColor: '#101828',
-    borderRadius: 8,
-    paddingVertical: 16,
+    borderRadius: 50,
+    padding: 10,
     alignItems: 'center',
   },
   editButtonText: {

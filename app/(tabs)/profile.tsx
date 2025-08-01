@@ -3,8 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Image } from "react-native";
 import { Ionicons, MaterialIcons, Feather, FontAwesome5, FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { signOut } from 'firebase/auth';
-import { auth } from '../firebaseConfig';
+import { authService } from '../services/authService';
 import { useAuth } from '../context/AuthContext';
 import { formatDateShort } from '../utils/dateUtils';
 import { getDoc, doc } from 'firebase/firestore';
@@ -52,7 +51,7 @@ export default function Profile() {
   };
 
   const handleEditProfile = () => Alert.alert('Edit Profile', 'Edit profile clicked!');
-  const handleChangeAvatar = () => Alert.alert('Change Photo', 'Open image picker here!');
+  const handleChangeAvatar = () => Alert.alert('Feature Coming Soon!', 'Profile image upload functionality will be available in the next update.');
   
   const handleSignOut = async () => {
     Alert.alert(
@@ -68,8 +67,12 @@ export default function Profile() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await signOut(auth);
-              router.replace('/auth/login');
+              const result = await authService.signOut();
+              if (result.success) {
+                router.replace('/auth/login');
+              } else {
+                Alert.alert('Error', result.error?.message || 'Failed to sign out. Please try again.');
+              }
             } catch (error) {
               Alert.alert('Error', 'Failed to sign out. Please try again.');
             }
@@ -96,6 +99,9 @@ export default function Profile() {
                 <TouchableOpacity style={profileStyles.avatarCamera} onPress={handleChangeAvatar}>
                   <Ionicons name="camera" size={16} color="#fff" />
                 </TouchableOpacity>
+                <View style={profileStyles.comingSoonBadge}>
+                  <Text style={profileStyles.comingSoonText}>Soon</Text>
+                </View>
               </View>
             </View>
             <View style={{ flex: 1, marginLeft: 12 }}>
@@ -186,7 +192,7 @@ export default function Profile() {
         </View>
 
         {/* Preferences Section */}
-        <Text style={styles.sectionTitle}>Preferences</Text>
+        {/* <Text style={styles.sectionTitle}>Preferences</Text>
         <View style={styles.card}>
           <View style={styles.row}>
             <View style={styles.iconWrap}><Feather name="moon" size={22} color="#9575CD" /></View>
@@ -217,7 +223,7 @@ export default function Profile() {
             </View>
             <Ionicons name="chevron-forward" size={20} color="#B0B0B0" />
           </TouchableOpacity>
-        </View>
+        </View> */}
 
         {/* Support & Legal Section */}
         <Text style={styles.sectionTitle}>Support & Legal</Text>
@@ -269,7 +275,7 @@ export default function Profile() {
         <View style={{flex:1,justifyContent:'center',alignItems:'center',marginBottom:64}}>
         <Text style={{fontSize:12,color:'#888'}}>Version 1.0.0</Text>
 
-          <Text style={{fontSize:12,color:'#888'}}>Copyright © 2025 Bachat. All rights reserved.</Text>
+          <Text style={{fontSize:12,color:'#888'}}>Copyright © 2025 CashCraft. All rights reserved.</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -370,4 +376,18 @@ const profileStyles = StyleSheet.create({
   statBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   statValue: { fontSize: 18, fontWeight: 'bold', color: '#222', marginBottom: 2 },
   statLabel: { fontSize: 12, color: '#888' },
+  comingSoonBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#FF9800',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  comingSoonText: {
+    color: '#fff',
+    fontSize: 8,
+    fontWeight: 'bold',
+  },
 }); 

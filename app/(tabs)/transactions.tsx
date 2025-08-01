@@ -8,7 +8,7 @@ import * as FileSystem from 'expo-file-system';
 import { transactionsService, Transaction } from '../services/transactionsService';
 import { useAuth } from '../context/AuthContext';
 import { formatDateShort } from '../utils/dateUtils';
-import { sendNotification } from '../services/notificationService';
+import { notificationService } from '../services/notificationService';
 
 // Get screen dimensions
 const { height: screenHeight } = Dimensions.get('window');
@@ -203,30 +203,14 @@ ${index + 1}. ${tx.description}
   const handleDownloadCSV = async () => {
     const csvContent = generateCSV(filtered);
     await downloadFile(csvContent, 'transactions.csv', 'text/csv');
-    // Send notification for successful download
-    if (user?.uid) {
-      await sendNotification({
-        userId: user.uid,
-        title: 'Download Complete',
-        body: `CSV file with ${filtered.length} transaction${filtered.length !== 1 ? 's' : ''} downloaded successfully.`,
-        icon: 'download-outline',
-      });
-    }
+    // No notification for download - only low balance alerts
     setShowDownload(false);
   };
 
   const handleDownloadPDF = async () => {
     const pdfContent = generatePDF(filtered);
     await downloadFile(pdfContent, 'transactions.txt', 'text/plain'); // Using .txt for now since we don't have PDF generation
-    // Send notification for successful download
-    if (user?.uid) {
-      await sendNotification({
-        userId: user.uid,
-        title: 'Download Complete',
-        body: `Text file with ${filtered.length} transaction${filtered.length !== 1 ? 's' : ''} downloaded successfully.`,
-        icon: 'download-outline',
-      });
-    }
+    // No notification for download - only low balance alerts
     setShowDownload(false);
   };
 

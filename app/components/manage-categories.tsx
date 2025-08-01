@@ -7,7 +7,7 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { categoriesService, Category } from '../services/categoriesService';
 import { useAuth } from '../context/AuthContext';
-import { sendNotification } from '../services/notificationService';
+import { notificationService } from '../services/notificationService';
 
 const ICONS = [
   'cart', 'car', 'home', 'utensils', 'gamepad', 'plane', 'gift', 'heart', 'credit-card', 'shopping-bag', 'bolt', 'dollar-sign', 'music', 'film', 'book', 'medkit', 'paw', 'tshirt', 'mobile-alt', 'glass-cheers',
@@ -109,13 +109,7 @@ export default function ManageCategories() {
         };
         
         setCategories([...categories, newCategory]);
-        // Send notification for category added
-        await sendNotification({
-          userId: user.uid,
-          title: 'Category Added',
-          body: `Category "${categoryName}" was added successfully.`,
-          icon: selectedIcon || 'checkmark-circle-outline',
-        });
+        // No notification for category added - only low balance alerts
       }
       
       setCategoryName('');

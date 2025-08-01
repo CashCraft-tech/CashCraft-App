@@ -20,15 +20,15 @@ const auth = getAuth(app);
 // Sample help articles data
 const helpArticles = [
   {
-    title: "Getting Started with Bachat",
-    content: "Welcome to Bachat! This guide will help you get started with managing your expenses and income effectively.\n\n1. Create your first transaction by tapping the '+' button on the bottom tab bar\n2. Choose between Income or Expense\n3. Enter the amount and description\n4. Select a category or create a new one\n5. Add any additional notes\n6. Tap 'Save Transaction' to complete\n\nYour transaction will now appear in your transaction list and contribute to your spending analytics.",
+    title: "Getting Started with CashCraft",
+          content: "Welcome to CashCraft! This guide will help you get started with managing your expenses and income effectively.\n\n1. Create your first transaction by tapping the '+' button on the bottom tab bar\n2. Choose between Income or Expense\n3. Enter the amount and description\n4. Select a category or create a new one\n5. Add any additional notes\n6. Tap 'Save Transaction' to complete\n\nYour transaction will now appear in your transaction list and contribute to your spending analytics.",
     category: "getting-started",
     tags: ["first time", "setup", "transactions", "basics"],
     isPublished: true
   },
   {
     title: "How to Add Your First Transaction",
-    content: "Adding transactions is the core feature of Bachat. Here's how to do it step by step:\n\n1. Navigate to the 'Add' tab in the bottom navigation\n2. Select the transaction type (Income or Expense)\n3. Enter the amount in the amount field\n4. Provide a clear description of the transaction\n5. Choose an appropriate category from the dropdown\n6. Optionally add notes for additional context\n7. Tap the 'Save Transaction' button\n\nYour transaction will be saved and you'll see a confirmation message. The transaction will immediately appear in your transaction list and update your dashboard analytics.",
+    content: "Adding transactions is the core feature of CashCraft. Here's how to do it step by step:\n\n1. Navigate to the 'Add' tab in the bottom navigation\n2. Select the transaction type (Income or Expense)\n3. Enter the amount in the amount field\n4. Provide a clear description of the transaction\n5. Choose an appropriate category from the dropdown\n6. Optionally add notes for additional context\n7. Tap the 'Save Transaction' button\n\nYour transaction will be saved and you'll see a confirmation message. The transaction will immediately appear in your transaction list and update your dashboard analytics.",
     category: "getting-started",
     tags: ["transactions", "add", "first time", "income", "expense"],
     isPublished: true
@@ -49,7 +49,7 @@ const helpArticles = [
   },
   {
     title: "Filtering and Searching Transactions",
-    content: "Finding specific transactions is easy with Bachat's filtering and search features:\n\nSearch Function:\n- Use the search bar at the top of the Transactions tab\n- Search by description, amount, or category\n- Results update in real-time as you type\n\nFiltering Options:\n- Filter by transaction type (Income/Expense)\n- Filter by category\n- Filter by date range\n- Combine multiple filters for precise results\n\nSorting:\n- Sort by date (newest/oldest first)\n- Sort by amount (highest/lowest)\n- Sort alphabetically by description\n\nAdvanced Tips:\n- Use specific keywords in transaction descriptions for better search results\n- Create consistent category names for easier filtering\n- Regularly review and clean up your transaction list",
+          content: "Finding specific transactions is easy with CashCraft's filtering and search features:\n\nSearch Function:\n- Use the search bar at the top of the Transactions tab\n- Search by description, amount, or category\n- Results update in real-time as you type\n\nFiltering Options:\n- Filter by transaction type (Income/Expense)\n- Filter by category\n- Filter by date range\n- Combine multiple filters for precise results\n\nSorting:\n- Sort by date (newest/oldest first)\n- Sort by amount (highest/lowest)\n- Sort alphabetically by description\n\nAdvanced Tips:\n- Use specific keywords in transaction descriptions for better search results\n- Create consistent category names for easier filtering\n- Regularly review and clean up your transaction list",
     category: "transactions",
     tags: ["search", "filter", "find", "organize", "sort"],
     isPublished: true
@@ -77,14 +77,14 @@ const helpArticles = [
   },
   {
     title: "Troubleshooting Common Issues",
-    content: "Experiencing issues with Bachat? Here are solutions to common problems:\n\nApp Not Loading:\n- Check your internet connection\n- Restart the app\n- Clear app cache and data\n- Update to the latest version\n\nTransactions Not Saving:\n- Ensure you have a stable internet connection\n- Check if all required fields are filled\n- Try closing and reopening the app\n- Contact support if the issue persists\n\nSync Issues:\n- Verify your internet connection\n- Pull down to refresh the transaction list\n- Log out and log back in\n- Check if your account is properly connected\n\nPerformance Issues:\n- Close other apps to free up memory\n- Restart your device\n- Update your device's operating system\n- Clear app cache\n\nIf you're still experiencing issues, please contact our support team with specific details about the problem.",
+          content: "Experiencing issues with CashCraft? Here are solutions to common problems:\n\nApp Not Loading:\n- Check your internet connection\n- Restart the app\n- Clear app cache and data\n- Update to the latest version\n\nTransactions Not Saving:\n- Ensure you have a stable internet connection\n- Check if all required fields are filled\n- Try closing and reopening the app\n- Contact support if the issue persists\n\nSync Issues:\n- Verify your internet connection\n- Pull down to refresh the transaction list\n- Log out and log back in\n- Check if your account is properly connected\n\nPerformance Issues:\n- Close other apps to free up memory\n- Restart your device\n- Update your device's operating system\n- Clear app cache\n\nIf you're still experiencing issues, please contact our support team with specific details about the problem.",
     category: "troubleshooting",
     tags: ["troubleshoot", "issues", "problems", "fix", "support"],
     isPublished: true
   },
   {
     title: "Data Backup and Recovery",
-    content: "Your data is important! Here's how Bachat protects and backs up your information:\n\nAutomatic Backup:\n- All your data is automatically backed up to the cloud\n- Transactions, categories, and settings are synced in real-time\n- Your data is available across all your devices\n\nData Recovery:\n- If you reinstall the app, simply log in to restore your data\n- All your transactions and settings will be automatically restored\n- No manual backup process is required\n\nData Export:\n- Export your transaction data for external analysis\n- Available formats: CSV, PDF\n- Access export options in the Transactions tab\n\nPrivacy and Security:\n- Your data is encrypted and securely stored\n- Only you have access to your personal information\n- Regular security updates protect your data\n\nBest Practices:\n- Keep your app updated to the latest version\n- Use a strong password for your account\n- Enable two-factor authentication if available\n- Regularly review your transaction data for accuracy",
+          content: "Your data is important! Here's how CashCraft protects and backs up your information:\n\nAutomatic Backup:\n- All your data is automatically backed up to the cloud\n- Transactions, categories, and settings are synced in real-time\n- Your data is available across all your devices\n\nData Recovery:\n- If you reinstall the app, simply log in to restore your data\n- All your transactions and settings will be automatically restored\n- No manual backup process is required\n\nData Export:\n- Export your transaction data for external analysis\n- Available formats: CSV, PDF\n- Access export options in the Transactions tab\n\nPrivacy and Security:\n- Your data is encrypted and securely stored\n- Only you have access to your personal information\n- Regular security updates protect your data\n\nBest Practices:\n- Keep your app updated to the latest version\n- Use a strong password for your account\n- Enable two-factor authentication if available\n- Regularly review your transaction data for accuracy",
     category: "account",
     tags: ["backup", "recovery", "data", "export", "security", "privacy"],
     isPublished: true

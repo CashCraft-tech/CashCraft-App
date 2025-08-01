@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "bachat",
-    "slug": "bachat",
+    "name": "CashCraft",
+    "slug": "cashcraft",
     "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "bachat",
+    "scheme": "cashcraft",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "androidStatusBar": {
@@ -14,7 +14,7 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.bachat.app",
+      "package": "com.cashcraft.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -35,6 +35,14 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#4caf50",
+          "sounds": ["./assets/sounds/notification.wav"]
         }
       ]
     ],

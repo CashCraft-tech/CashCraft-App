@@ -55,7 +55,7 @@ export default function LegalIndex() {
           </View>
           <Text style={styles.welcomeTitle}>Legal Information</Text>
           <Text style={styles.welcomeSubtitle}>
-            Important legal documents and policies for using Bachat
+            Important legal documents and policies for using CashCraft
           </Text>
         </View>
 
@@ -87,7 +87,7 @@ export default function LegalIndex() {
             <Text style={styles.noticeTitle}>Important Notice</Text>
           </View>
           <Text style={styles.noticeText}>
-            These legal documents govern your use of Bachat. By using our app, you agree to be bound 
+            These legal documents govern your use of CashCraft. By using our app, you agree to be bound 
             by these terms. Please read them carefully and contact us if you have any questions.
           </Text>
         </View>

@@ -7,7 +7,7 @@ import { categoriesService, Category } from '../services/categoriesService';
 import { transactionsService } from '../services/transactionsService';
 import { useAuth } from '../context/AuthContext';
 import { router } from 'expo-router';
-import { sendNotification } from '../services/notificationService';
+import { notificationService } from '../services/notificationService';
 
 const PAYMENT_TYPES = [
   { label: 'Cash', icon: <FontAwesome5 name="money-bill-wave" size={20} color="#43A047" /> },
@@ -130,13 +130,7 @@ export default function Add() {
       };
 
       await transactionsService.addTransaction(transaction);
-      // Send notification for transaction added
-      await sendNotification({
-        userId: user.uid,
-        title: 'Transaction Added',
-        body: `Your transaction "${title}" was added successfully.`,
-        icon: selectedCategory.icon || 'checkmark-circle-outline',
-      });
+      // No notification for transaction added - only low balance alerts
       Alert.alert('Success', 'Transaction added successfully!');
       
       // Reset form
@@ -313,10 +307,16 @@ export default function Add() {
 
           {/* Receipt Upload */}
           <Text style={styles.label}>Receipt <Text style={{ color: '#888' }}>(Optional)</Text></Text>
-          <TouchableOpacity style={styles.receiptBox}>
+          <TouchableOpacity 
+            style={styles.receiptBox}
+            onPress={() => Alert.alert('Feature Coming Soon!', 'Receipt upload functionality will be available in the next update.')}
+          >
             <Ionicons name="cloud-upload-outline" size={32} color="#B0B0B0" />
             <Text style={styles.receiptText}>Add Receipt</Text>
             <Text style={styles.receiptSub}>Take a photo or upload from gallery</Text>
+            <View style={styles.comingSoonBadge}>
+              <Text style={styles.comingSoonText}>Coming Soon!</Text>
+            </View>
           </TouchableOpacity>
 
           {/* Action Buttons */}
@@ -382,5 +382,19 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
+  },
+  comingSoonBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#FF9800',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  comingSoonText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
 }); 

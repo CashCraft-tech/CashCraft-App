@@ -1,14 +1,16 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, ScrollView, Alert } from "react-native";
 import { useRouter } from "expo-router";
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebaseConfig';
+import { authService } from "../services/authService";
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function Login() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -21,70 +23,51 @@ export default function Login() {
     setLoading(true);
     try {
       console.log('Attempting to sign in with:', email);
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      console.log('Sign in successful:', userCredential.user.email);
+      const result = await authService.signIn(email, password);
       
-      // Show success message briefly before navigation
-      setTimeout(() => {
-        router.replace('/(tabs)/home');
-      }, 1500);
+      if (result.success && result.user) {
+        console.log('Sign in successful:', result.user.email);
+        
+        // Show success message briefly before navigation
+        setTimeout(() => {
+          router.replace('/(tabs)/home');
+        }, 1500);
+      } else {
+        setError(result.error?.message || 'Sign in failed. Please try again.');
+      }
       
     } catch (err: any) {
       console.error('Sign in error:', err);
-      let errorMessage = 'Sign in failed. Please try again.';
-      
-      // Handle specific Firebase auth errors
-      switch (err.code) {
-        case 'auth/user-not-found':
-          errorMessage = 'No account found with this email address.';
-          break;
-        case 'auth/wrong-password':
-          errorMessage = 'Incorrect password. Please try again.';
-          break;
-        case 'auth/invalid-email':
-          errorMessage = 'Invalid email address.';
-          break;
-        case 'auth/too-many-requests':
-          errorMessage = 'Too many failed attempts. Please try again later.';
-          break;
-        case 'auth/network-request-failed':
-          errorMessage = 'Network error. Please check your connection.';
-          break;
-        default:
-          errorMessage = err.message || 'Sign in failed. Please try again.';
-      }
-      
-      setError(errorMessage);
+      setError('Sign in failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogleSignIn = () => {
-    // Here you would implement Google OAuth
-    console.log('Google sign in clicked');
-    // For now, just navigate to main app
-    router.replace('/(tabs)/home');
-  };
+
 
   return (
-    <KeyboardAwareScrollView
-    contentContainerStyle={styles.container}
-    enableOnAndroid={true}
-    extraScrollHeight={20}
-    keyboardShouldPersistTaps="handled"
-    enableAutomaticScroll={true}
-  >
+    <LinearGradient
+      colors={['#002219', '#008361', '#002219']}
+      style={styles.gradientContainer}
+    >
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.container}
+        enableOnAndroid={true}
+        extraScrollHeight={20}
+        keyboardShouldPersistTaps="handled"
+        enableAutomaticScroll={true}
+      >
       
         <View style={styles.header}>
         <Image source={require("../../assets/images/icon.png")} style={styles.logo} />
-        <Text style={styles.title}>Bachat</Text>
+        <Text style={styles.title}>CashCraft</Text>
         </View>
         <Text style={styles.subtitle}>Smart expense tracking made simple</Text>
 
         <View style={styles.box}>
-        <Text style={styles.title}>Welcome Back</Text>
-        <Text style={styles.subtitle}>Sign in to continue tracking your expenses</Text>
+        <Text style={styles.Welcometitle}>Welcome Back</Text>
+        <Text style={styles.Welcomesubtitle}>Sign in to continue tracking your expenses</Text>
         <Text style={styles.label}>Email</Text>
         <View style={styles.inputContainer}>
           <TextInput
@@ -103,8 +86,18 @@ export default function Login() {
             placeholder="Enter your password"
             value={password}
             onChangeText={setPassword}
-            secureTextEntry
+            secureTextEntry={!showPassword}
           />
+          <TouchableOpacity
+            onPress={() => setShowPassword(!showPassword)}
+            style={styles.eyeIcon}
+          >
+            <Ionicons
+              name={showPassword ? "eye-off" : "eye"}
+              size={20}
+              color="#666"
+            />
+          </TouchableOpacity>
         </View>
         <TouchableOpacity onPress={() => router.push("/auth/forgot-password")}> 
           <Text style={styles.forgot}>Forgot password?</Text>
@@ -113,15 +106,7 @@ export default function Login() {
           <Text style={styles.signInText}>{loading ? 'Signing In...' : 'Sign In'}</Text>
         </TouchableOpacity>
         {error ? <Text style={{ color: 'red', marginBottom: 8 }}>{error}</Text> : null}
-        <View style={styles.orContainer}>
-          <View style={styles.line} />
-          <Text style={styles.orText}>OR</Text>
-          <View style={styles.line} />
-        </View>
-        <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignIn}>
-          <Image source={require("../../assets/images/icon.png")} style={styles.googleLogo} />
-          <Text style={styles.googleText}>Continue with Google</Text>
-        </TouchableOpacity>
+
         <View style={styles.signUpContainer}>
           <Text>Don't have an account? </Text>
           <TouchableOpacity onPress={() => router.push("/auth/signup")}> 
@@ -147,14 +132,17 @@ export default function Login() {
           </View>
         </View>
       </Modal>
-    </KeyboardAwareScrollView>
+      </KeyboardAwareScrollView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradientContainer: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: "#eaf7ec",
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
@@ -173,7 +161,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   header: {
-    flexDirection: "row",
+    flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
    
@@ -182,18 +170,33 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     marginHorizontal:20,
-    marginVertical:20,
+   
   },
-  title: {
+  Welcometitle: {
     fontSize: 28,
+    color: "black",
     fontWeight: "bold",
     marginTop: 10,
     marginBottom: 4,
     textAlign: "center",
   },
+  title: {
+    fontSize: 28,
+    color: "white",
+    fontWeight: "bold",
+    marginTop: 10,
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  Welcomesubtitle: {
+    fontSize: 15,
+    color: "black",
+    marginBottom: 24,
+    textAlign: "center",
+  },
   subtitle: {
     fontSize: 15,
-    color: "#4caf50",
+    color: "white",
     marginBottom: 24,
     textAlign: "center",
   },
@@ -218,6 +221,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     paddingHorizontal: 8,
   },
+  eyeIcon: {
+    padding: 8,
+  },
   forgot: {
     color: "#4caf50",
     alignSelf: "flex-end",
@@ -237,42 +243,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 16,
   },
-  orContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 10,
-  },
-  orText: {
-    marginHorizontal: 8,
-    color: "#888",
-  },
-  line: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#ccc",
-  },
-  googleButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#4caf50",
-    width: "100%",
-    paddingVertical: 12,
-    justifyContent: "center",
-    marginBottom: 16,
-  },
-  googleLogo: {
-    width: 24,
-    height: 24,
-    marginRight: 8,
-  },
-  googleText: {
-    color: "#4caf50",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
+
   signUpContainer: {
     flexDirection: "row",
     alignItems: "center",

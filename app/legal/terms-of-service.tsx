@@ -23,7 +23,7 @@ export default function TermsOfService() {
 
           <View style={styles.section}>
             <Text style={styles.sectionText}>
-              Welcome to Bachat! These Terms of Service ("Terms") govern your use of the Bachat mobile 
+              Welcome to CashCraft! These Terms of Service ("Terms") govern your use of the CashCraft mobile 
               application and related services (collectively, the "Service"). By using our Service, 
               you agree to these Terms.
             </Text>
@@ -40,7 +40,7 @@ export default function TermsOfService() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>2. Description of Service</Text>
             <Text style={styles.sectionText}>
-              Bachat is a personal finance management application that allows users to:
+              CashCraft is a personal finance management application that allows users to:
             </Text>
             <View style={styles.bulletList}>
               <Text style={styles.bulletItem}>• Track income and expenses</Text>
@@ -90,7 +90,7 @@ export default function TermsOfService() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>6. Intellectual Property</Text>
             <Text style={styles.sectionText}>
-              The Service and its original content, features, and functionality are owned by Bachat 
+              The Service and its original content, features, and functionality are owned by CashCraft 
               and are protected by international copyright, trademark, patent, trade secret, and other 
               intellectual property laws.
             </Text>
@@ -113,7 +113,7 @@ export default function TermsOfService() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>8. Limitation of Liability</Text>
             <Text style={styles.sectionText}>
-              IN NO EVENT SHALL BACHAT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, 
+              IN NO EVENT SHALL CASHCRAFT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, 
               OR PUNITIVE DAMAGES, INCLUDING WITHOUT LIMITATION, LOSS OF PROFITS, DATA, USE, GOODWILL, 
               OR OTHER INTANGIBLE LOSSES, RESULTING FROM YOUR USE OF THE SERVICE.
             </Text>
@@ -122,7 +122,7 @@ export default function TermsOfService() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>9. Indemnification</Text>
             <Text style={styles.sectionText}>
-              You agree to defend, indemnify, and hold harmless Bachat and its officers, directors, 
+              You agree to defend, indemnify, and hold harmless CashCraft and its officers, directors, 
               employees, and agents from and against any claims, damages, obligations, losses, 
               liabilities, costs, or debt arising from your use of the Service.
             </Text>

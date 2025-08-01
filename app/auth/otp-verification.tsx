@@ -1,29 +1,114 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from "react-native";
+import React, { useState, useRef, useEffect } from "react";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, ActivityIndicator } from "react-native";
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { otpService } from "../services/otpService";
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function OTPVerification() {
   const router = useRouter();
   const { email } = useLocalSearchParams();
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendDisabled, setResendDisabled] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  
+  const inputRefs = useRef<TextInput[]>([]);
+
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    } else {
+      setResendDisabled(false);
+    }
+  }, [countdown]);
 
   const handleChange = (index: number, value: string) => {
     if (/^\d?$/.test(value)) {
       const newOtp = [...otp];
       newOtp[index] = value;
       setOtp(newOtp);
+      
+      // Auto-focus next input
+      if (value && index < 5) {
+        inputRefs.current[index + 1]?.focus();
+      }
+    }
+  };
+
+  const handleVerifyOTP = async () => {
+    const otpCode = otp.join("");
+    if (otpCode.length !== 6) {
+      setError('Please enter the complete 6-digit code');
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const result = await otpService.verifyOTP(email as string, otpCode);
+      
+      if (result.success) {
+        Alert.alert(
+          'Success',
+          'OTP verified successfully! You can now reset your password.',
+          [
+            {
+              text: 'OK',
+              onPress: () => router.push('/auth/login')
+            }
+          ]
+        );
+      } else {
+        setError(result.message);
+      }
+    } catch (error) {
+      console.error('Error verifying OTP:', error);
+      setError('Failed to verify OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOTP = async () => {
+    setResendLoading(true);
+    setError("");
+
+    try {
+      const result = await otpService.resendOTP(email as string);
+      
+      if (result.success) {
+        setOtp(["", "", "", "", "", ""]);
+        setResendDisabled(true);
+        setCountdown(60); // 60 seconds cooldown
+        Alert.alert('OTP Resent', result.message);
+      } else {
+        setError(result.message);
+      }
+    } catch (error) {
+      console.error('Error resending OTP:', error);
+      setError('Failed to resend OTP. Please try again.');
+    } finally {
+      setResendLoading(false);
     }
   };
 
   return (
-    <KeyboardAwareScrollView
-      contentContainerStyle={styles.container}
-      enableOnAndroid={true}
-      extraScrollHeight={20}
-      keyboardShouldPersistTaps="handled"
-      enableAutomaticScroll={true}
+    <LinearGradient
+    colors={['#002219', '#008361', '#002219']}
+    style={styles.gradientContainer}
     >
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.container}
+        enableOnAndroid={true}
+        extraScrollHeight={20}
+        keyboardShouldPersistTaps="handled"
+        enableAutomaticScroll={true}
+      >
       <Image source={require("../../assets/images/icon.png")} style={styles.logo} />
       <Text style={styles.title}>OTP Verification</Text>
       <Text style={styles.subtitle}>Enter the 6-digit code sent to {email || "your email"}</Text>
@@ -31,6 +116,9 @@ export default function OTPVerification() {
         {otp.map((digit, idx) => (
           <TextInput
             key={idx}
+            ref={(ref) => {
+              if (ref) inputRefs.current[idx] = ref;
+            }}
             style={styles.otpInput}
             keyboardType="number-pad"
             maxLength={1}
@@ -39,20 +127,45 @@ export default function OTPVerification() {
           />
         ))}
       </View>
-      <TouchableOpacity style={styles.verifyButton}>
-        <Text style={styles.verifyText}>Verify OTP</Text>
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      <TouchableOpacity 
+        style={[styles.verifyButton, loading && styles.verifyButtonDisabled]} 
+        onPress={handleVerifyOTP}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <Text style={styles.verifyText}>Verify OTP</Text>
+        )}
       </TouchableOpacity>
-      <TouchableOpacity>
-        <Text style={styles.resendText}>Didn't receive code? Resend</Text>
+      <TouchableOpacity 
+        onPress={handleResendOTP}
+        disabled={resendDisabled || resendLoading}
+        style={resendDisabled && styles.resendDisabled}
+      >
+        {resendLoading ? (
+          <ActivityIndicator size="small" color="#4caf50" />
+        ) : (
+          <Text style={styles.resendText}>
+            {resendDisabled 
+              ? `Resend in ${countdown}s` 
+              : "Didn't receive code? Resend"
+            }
+          </Text>
+        )}
       </TouchableOpacity>
-    </KeyboardAwareScrollView>
+      </KeyboardAwareScrollView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradientContainer: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: "#eaf7ec",
     alignItems: "center",
     padding: 20,
     paddingTop: 40,
@@ -113,5 +226,17 @@ const styles = StyleSheet.create({
     color: "#4caf50",
     textAlign: "center",
     textDecorationLine: "underline",
+  },
+  errorText: {
+    color: "#f44336",
+    fontSize: 14,
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  verifyButtonDisabled: {
+    backgroundColor: "#ccc",
+  },
+  resendDisabled: {
+    opacity: 0.5,
   },
 }); 

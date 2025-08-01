@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { db } from '../firebaseConfig';
@@ -20,28 +20,41 @@ const NotificationScreen = () => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchNotifications = async () => {
+    if (!user?.uid) return;
+    
+    try {
+      const q = query(
+        collection(db, 'notifications'),
+        where('userId', '==', user.uid),
+        orderBy('timestamp', 'desc')
+      );
+      const querySnapshot = await getDocs(q);
+      const notifs = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() })) as Notification[];
+      setNotifications(notifs);
+      console.log('Fetched notifications:', notifs.length);
+    } catch (e) {
+      console.error('Error fetching notifications:', e);
+    }
+  };
 
   useEffect(() => {
     if (!user?.uid) return;
-    const fetchNotifications = async () => {
+    const loadNotifications = async () => {
       setLoading(true);
-      try {
-        const q = query(
-          collection(db, 'notifications'),
-          where('userId', '==', user.uid),
-          orderBy('timestamp', 'desc')
-        );
-        const querySnapshot = await getDocs(q);
-        const notifs = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() })) as Notification[];
-        setNotifications(notifs);
-      } catch (e) {
-        console.error('Error fetching notifications:', e);
-      } finally {
-        setLoading(false);
-      }
+      await fetchNotifications();
+      setLoading(false);
     };
-    fetchNotifications();
+    loadNotifications();
   }, [user]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchNotifications();
+    setRefreshing(false);
+  };
 
   const handleClearAll = async () => {
     try {
@@ -81,6 +94,9 @@ const NotificationScreen = () => {
           data={notifications}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4caf50']} />
+          }
           renderItem={({ item }) => (
             <View style={styles.notification}>
               <Ionicons 
