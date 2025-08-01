@@ -4,6 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useTheme } from '../context/ThemeContext';
 import { helpCenterService, HelpArticle } from '../services/supportService';
 
 const HELP_CATEGORIES = [
@@ -15,6 +17,7 @@ const HELP_CATEGORIES = [
 ];
 
 export default function HelpCenter() {
+  const { theme } = useTheme();
   const [articles, setArticles] = useState<HelpArticle[]>([]);
   const [filteredArticles, setFilteredArticles] = useState<HelpArticle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,18 +81,20 @@ export default function HelpCenter() {
     <TouchableOpacity
       style={[
         styles.categoryItem,
-        selectedCategory === item.id && styles.selectedCategory
+        { backgroundColor: theme.card },
+        selectedCategory === item.id && { backgroundColor: theme.primary }
       ]}
       onPress={() => handleCategoryPress(item.id)}
     >
       <Ionicons 
         name={item.icon as any} 
         size={24} 
-        color={selectedCategory === item.id ? '#4caf50' : '#666'} 
+        color={selectedCategory === item.id ? '#fff' : theme.textSecondary} 
       />
       <Text style={[
         styles.categoryTitle,
-        selectedCategory === item.id && styles.selectedCategoryText
+        { color: theme.textSecondary },
+        selectedCategory === item.id && { color: '#fff' }
       ]}>
         {item.title}
       </Text>
@@ -98,20 +103,20 @@ export default function HelpCenter() {
 
   const renderArticleItem = ({ item }: { item: HelpArticle }) => (
     <TouchableOpacity
-      style={styles.articleItem}
+      style={[styles.articleItem, { backgroundColor: theme.card }]}
       onPress={() => handleArticlePress(item)}
     >
       <View style={styles.articleHeader}>
-        <Text style={styles.articleTitle}>{item.title}</Text>
-        <Ionicons name="chevron-forward" size={20} color="#666" />
+        <Text style={[styles.articleTitle, { color: theme.text }]}>{item.title}</Text>
+        <Ionicons name="chevron-forward" size={20} color={theme.textTertiary} />
       </View>
-      <Text style={styles.articlePreview} numberOfLines={2}>
+      <Text style={[styles.articlePreview, { color: theme.textSecondary }]} numberOfLines={2}>
         {item.content}
       </Text>
       <View style={styles.articleTags}>
         {item.tags.slice(0, 3).map((tag, index) => (
-          <View key={index} style={styles.tag}>
-            <Text style={styles.tagText}>{tag}</Text>
+          <View key={index} style={[styles.tag, { backgroundColor: theme.surface }]}>
+            <Text style={[styles.tagText, { color: theme.textSecondary }]}>{tag}</Text>
           </View>
         ))}
       </View>
@@ -120,17 +125,19 @@ export default function HelpCenter() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+        <StatusBar style={theme.statusBarStyle} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4caf50" />
-          <Text style={styles.loadingText}>Loading help articles...</Text>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Loading help articles...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <StatusBar style={theme.statusBarStyle} />
       <KeyboardAwareScrollView
         contentContainerStyle={styles.scrollContent}
         enableOnAndroid={true}
@@ -141,32 +148,32 @@ export default function HelpCenter() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#333" />
+            <Ionicons name="arrow-back" size={24} color={theme.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Help Center</Text>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>Help Center</Text>
           <View style={styles.placeholder} />
         </View>
 
         {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+        <View style={[styles.searchContainer, { backgroundColor: theme.card }]}>
+          <Ionicons name="search" size={20} color={theme.textSecondary} style={styles.searchIcon} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: theme.text }]}
             placeholder="Search help articles..."
             value={searchTerm}
             onChangeText={setSearchTerm}
-            placeholderTextColor="#888"
+            placeholderTextColor={theme.textTertiary}
           />
           {searchTerm.length > 0 && (
             <TouchableOpacity onPress={() => setSearchTerm('')}>
-              <Ionicons name="close-circle" size={20} color="#666" />
+              <Ionicons name="close-circle" size={20} color={theme.textSecondary} />
             </TouchableOpacity>
           )}
         </View>
 
         {/* Categories */}
         <View style={styles.categoriesSection}>
-          <Text style={styles.sectionTitle}>Categories</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Categories</Text>
           <FlatList
             data={HELP_CATEGORIES}
             renderItem={renderCategoryItem}
@@ -180,22 +187,22 @@ export default function HelpCenter() {
         {/* Articles */}
         <View style={styles.articlesSection}>
           <View style={styles.articlesHeader}>
-            <Text style={styles.sectionTitle}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>
               {selectedCategory 
                 ? HELP_CATEGORIES.find(cat => cat.id === selectedCategory)?.title 
                 : 'All Articles'
               }
             </Text>
-            <Text style={styles.articlesCount}>
+            <Text style={[styles.articlesCount, { color: theme.textSecondary }]}>
               {filteredArticles.length} article{filteredArticles.length !== 1 ? 's' : ''}
             </Text>
           </View>
 
           {filteredArticles.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="document-text-outline" size={64} color="#B0B0B0" />
-              <Text style={styles.emptyTitle}>No Articles Found</Text>
-              <Text style={styles.emptyMessage}>
+              <Ionicons name="document-text-outline" size={64} color={theme.textTertiary} />
+              <Text style={[styles.emptyTitle, { color: theme.textSecondary }]}>No Articles Found</Text>
+              <Text style={[styles.emptyMessage, { color: theme.textTertiary }]}>
                 {searchTerm 
                   ? 'Try adjusting your search terms'
                   : 'No help articles available for this category'
@@ -220,7 +227,6 @@ export default function HelpCenter() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FB',
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -238,7 +244,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#222',
   },
   placeholder: {
     width: 40,
@@ -246,7 +251,6 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -263,7 +267,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#222',
   },
   categoriesSection: {
     marginBottom: 24,
@@ -271,7 +274,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#222',
     marginBottom: 16,
   },
   categoriesList: {
@@ -279,7 +281,6 @@ const styles = StyleSheet.create({
   },
   categoryItem: {
     alignItems: 'center',
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     marginRight: 12,
@@ -290,18 +291,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
-  selectedCategory: {
-    backgroundColor: '#4caf50',
-  },
   categoryTitle: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#666',
     marginTop: 8,
     textAlign: 'center',
-  },
-  selectedCategoryText: {
-    color: '#fff',
   },
   articlesSection: {
     flex: 1,
@@ -314,10 +308,8 @@ const styles = StyleSheet.create({
   },
   articlesCount: {
     fontSize: 14,
-    color: '#666',
   },
   articleItem: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -336,12 +328,10 @@ const styles = StyleSheet.create({
   articleTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#222',
     flex: 1,
   },
   articlePreview: {
     fontSize: 14,
-    color: '#666',
     lineHeight: 20,
     marginBottom: 12,
   },
@@ -350,7 +340,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   tag: {
-    backgroundColor: '#f0f0f0',
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -359,7 +348,6 @@ const styles = StyleSheet.create({
   },
   tagText: {
     fontSize: 12,
-    color: '#666',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -369,13 +357,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#888',
     marginTop: 16,
     marginBottom: 8,
   },
   emptyMessage: {
     fontSize: 14,
-    color: '#AAA',
     textAlign: 'center',
   },
   loadingContainer: {
@@ -386,6 +372,5 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#666',
   },
 }); 

@@ -7,6 +7,7 @@ import { Svg, G, Circle } from 'react-native-svg';
 import { categoriesService, Category as FirebaseCategory } from '../services/categoriesService';
 import { transactionsService, Transaction, TransactionStats } from '../services/transactionsService';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 // TypeScript Interfaces
 interface Category {
@@ -76,6 +77,7 @@ function DonutChart({ data, total }: DonutChartProps) {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const [period, setPeriod] = useState<string>('Monthly');
   const [categories, setCategories] = useState<Category[]>([]);
   const [topSpending, setTopSpending] = useState<TopSpendingCategory[]>([]);
@@ -100,84 +102,80 @@ export default function Dashboard() {
       
       switch (period) {
         case 'Daily':
-          // Start of today (00:00:00.000)
-          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
           break;
         case 'Weekly':
-          // Get start of current week (Monday 00:00:00.000)
           const dayOfWeek = now.getDay();
-          const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Sunday = 0, so convert to Monday = 0
-          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysFromMonday, 0, 0, 0, 0);
+          const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysToSubtract);
           break;
         case 'Monthly':
-          // Start of current month (00:00:00.000)
-          startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
           break;
         default:
-          startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
       }
+
+      // Fetch transactions for the selected period
+      const transactions = await transactionsService.getTransactionsByDateRange(user.uid, startDate, now);
       
-      // Set end date to end of current day (23:59:59.999)
-      const endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      // Calculate stats
+      const incomeTransactions = transactions.filter((t: Transaction) => t.type === 'income');
+      const expenseTransactions = transactions.filter((t: Transaction) => t.type === 'expense');
       
-      // Fetch all categories (both income and expense)
-      const userCategories = await categoriesService.getUserCategories(user.uid);
-      const expenseCategories = userCategories.filter(cat => cat.type === 'expense');
-      const incomeCategories = userCategories.filter(cat => cat.type === 'income');
-      
-      // Get ALL transactions for the selected period (both income and expense)
-      const periodTransactions = await transactionsService.getTransactionsByDateRange(user.uid, startDate, endDate);
-      
-      // Separate income and expense transactions
-      const expenseTransactions = periodTransactions.filter(t => t.type === 'expense');
-      const incomeTransactions = periodTransactions.filter(t => t.type === 'income');
-      
-      console.log(`Dashboard ${period}: Found ${periodTransactions.length} total transactions (${incomeTransactions.length} income, ${expenseTransactions.length} expense)`);
-      
-      // Calculate spending per expense category for the selected period
-      const categoriesWithSpending: Category[] = expenseCategories.map(cat => {
-        const categoryTransactions = expenseTransactions.filter(
-          transaction => transaction.categoryId === cat.id
-        );
-        const totalSpent = categoryTransactions.reduce((sum, transaction) => sum + transaction.amount, 0);
-        
-        return {
-          label: cat.name,
-          color: cat.color,
-          value: totalSpent,
-          icon: getIconComponent(cat.icon, cat.color, 20)
-        };
-      }).filter(cat => cat.value > 0); // Only show categories with spending
-      
-      setCategories(categoriesWithSpending);
-      
-      // Calculate top spending categories for the selected period
-      const sortedCategories = [...categoriesWithSpending].sort((a, b) => b.value - a.value);
-      const maxValue = sortedCategories[0]?.value || 1;
-      
-      const topSpendingData: TopSpendingCategory[] = sortedCategories.slice(0, 3).map(cat => ({
-        label: cat.label,
-        value: cat.value,
-        percent: Math.round((cat.value / maxValue) * 100),
-        color: cat.color,
-        icon: cat.icon
-      }));
-      
-      setTopSpending(topSpendingData);
-      
-      // Calculate stats manually to ensure accuracy
-      const totalIncome = incomeTransactions.reduce((sum, t) => sum + t.amount, 0);
-      const totalExpense = expenseTransactions.reduce((sum, t) => sum + t.amount, 0);
+      const totalIncome = incomeTransactions.reduce((sum: number, t: Transaction) => sum + t.amount, 0);
+      const totalExpense = expenseTransactions.reduce((sum: number, t: Transaction) => sum + t.amount, 0);
       const balance = totalIncome - totalExpense;
       
-      const userStats: TransactionStats = {
+      setStats({
         totalIncome,
         totalExpense,
         balance,
-        transactionCount: periodTransactions.length
-      };
+        transactionCount: transactions.length
+      });
+
+      // Get categories for spending breakdown
+      const firebaseCategories = await categoriesService.getUserCategories(user.uid);
       
-      setStats(userStats);
+      // Calculate spending by category
+      const categorySpending: { [key: string]: number } = {};
+      expenseTransactions.forEach((transaction: Transaction) => {
+        const category = firebaseCategories.find((c: FirebaseCategory) => c.id === transaction.categoryId);
+        if (category) {
+          categorySpending[category.name] = (categorySpending[category.name] || 0) + transaction.amount;
+        }
+      });
+
+      // Convert to chart data
+      const chartData: Category[] = Object.entries(categorySpending).map(([name, amount]) => {
+        const category = firebaseCategories.find((c: FirebaseCategory) => c.name === name);
+        return {
+          label: name,
+          value: amount,
+          color: category?.color || '#4CAF50',
+          icon: getIconComponent(category?.icon || 'category', category?.color || '#4CAF50')
+        };
+      });
+
+      setCategories(chartData);
+
+      // Calculate top spending categories
+      const topCategories = Object.entries(categorySpending)
+        .map(([name, amount]) => {
+          const category = firebaseCategories.find((c: FirebaseCategory) => c.name === name);
+          const percent = totalExpense > 0 ? (amount / totalExpense) * 100 : 0;
+          return {
+            label: name,
+            value: amount,
+            percent: Math.round(percent),
+            color: category?.color || '#4CAF50',
+            icon: getIconComponent(category?.icon || 'category', category?.color || '#4CAF50')
+          };
+        })
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 5);
+
+      setTopSpending(topCategories);
       
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -188,7 +186,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchData();
-  }, [user, period]); // Add period as dependency to refetch when period changes
+  }, [user?.uid, period]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -197,63 +195,19 @@ export default function Dashboard() {
   };
 
   const getIconComponent = (iconName: string, color: string, size: number = 24) => {
-    const iconMap: { [key: string]: any } = {
-      // FontAwesome5 icons (from manage categories)
-      'cart': <FontAwesome5 name="shopping-cart" size={size} color={color} />,
-      'car': <FontAwesome5 name="car" size={size} color={color} />,
-      'home': <FontAwesome5 name="home" size={size} color={color} />,
-      'utensils': <FontAwesome5 name="utensils" size={size} color={color} />,
-      'gamepad': <FontAwesome5 name="gamepad" size={size} color={color} />,
-      'plane': <FontAwesome5 name="plane" size={size} color={color} />,
-      'gift': <FontAwesome5 name="gift" size={size} color={color} />,
-      'heart': <FontAwesome5 name="heart" size={size} color={color} />,
-      'credit-card': <FontAwesome5 name="credit-card" size={size} color={color} />,
-      'shopping-bag': <FontAwesome5 name="shopping-bag" size={size} color={color} />,
-      'bolt': <FontAwesome5 name="bolt" size={size} color={color} />,
-      'dollar-sign': <FontAwesome5 name="dollar-sign" size={size} color={color} />,
-      'music': <FontAwesome5 name="music" size={size} color={color} />,
-      'film': <FontAwesome5 name="film" size={size} color={color} />,
-      'book': <FontAwesome5 name="book" size={size} color={color} />,
-      'medkit': <FontAwesome5 name="medkit" size={size} color={color} />,
-      'paw': <FontAwesome5 name="paw" size={size} color={color} />,
-      'tshirt': <FontAwesome5 name="tshirt" size={size} color={color} />,
-      'mobile-alt': <FontAwesome5 name="mobile-alt" size={size} color={color} />,
-      'glass-cheers': <FontAwesome5 name="glass-cheers" size={size} color={color} />,
-      
-      // MaterialIcons and Ionicons (legacy support)
-      'restaurant': <MaterialIcons name="restaurant" size={size} color={color} />,
-      'car-sport': <Ionicons name="car-sport" size={size} color={color} />,
-      'receipt': <MaterialIcons name="receipt" size={size} color={color} />,
-      'movie': <MaterialIcons name="movie" size={size} color={color} />,
-      'cash': <Ionicons name="cash" size={size} color={color} />,
-      'laptop': <Ionicons name="laptop" size={size} color={color} />,
-      'medical': <Ionicons name="medical" size={size} color={color} />,
-      'school': <Ionicons name="school" size={size} color={color} />,
-      'airplane': <Ionicons name="airplane" size={size} color={color} />,
-      'bus': <Ionicons name="bus" size={size} color={color} />,
-      'train': <Ionicons name="train" size={size} color={color} />,
-      'bicycle': <Ionicons name="bicycle" size={size} color={color} />,
-      'walk': <Ionicons name="walk" size={size} color={color} />,
-      'fitness': <Ionicons name="fitness" size={size} color={color} />,
-      'game-controller': <Ionicons name="game-controller" size={size} color={color} />,
-      'library': <Ionicons name="library" size={size} color={color} />,
-      'card': <Ionicons name="card" size={size} color={color} />,
-      'wallet': <Ionicons name="wallet" size={size} color={color} />,
-      'bank': <Ionicons name="business" size={size} color={color} />,
-      'phone': <Ionicons name="phone-portrait" size={size} color={color} />,
-      'wifi': <Ionicons name="wifi" size={size} color={color} />,
-      'electricity': <Ionicons name="flash" size={size} color={color} />,
-      'water': <Ionicons name="water" size={size} color={color} />,
-      'gas': <Ionicons name="flame" size={size} color={color} />,
-      'internet': <Ionicons name="globe" size={size} color={color} />,
-      'tv': <Ionicons name="tv" size={size} color={color} />,
-      'camera': <Ionicons name="camera" size={size} color={color} />,
-      'pizza': <Ionicons name="pizza" size={size} color={color} />,
-      'beer': <Ionicons name="beer" size={size} color={color} />,
-      'wine': <Ionicons name="wine" size={size} color={color} />,
-      'coffee': <Ionicons name="cafe" size={size} color={color} />,
-      'fast-food': <Ionicons name="fast-food" size={size} color={color} />,
-      'ice-cream': <Ionicons name="ice-cream" size={size} color={color} />,
+    const iconMap: { [key: string]: React.ReactNode } = {
+      'food': <MaterialIcons name="restaurant" size={size} color={color} />,
+      'transport': <MaterialIcons name="directions-car" size={size} color={color} />,
+      'shopping': <MaterialIcons name="shopping-bag" size={size} color={color} />,
+      'entertainment': <MaterialIcons name="movie" size={size} color={color} />,
+      'health': <MaterialIcons name="local-hospital" size={size} color={color} />,
+      'education': <MaterialIcons name="school" size={size} color={color} />,
+      'bills': <MaterialIcons name="receipt" size={size} color={color} />,
+      'salary': <MaterialIcons name="account-balance-wallet" size={size} color={color} />,
+      'freelance': <MaterialIcons name="work" size={size} color={color} />,
+      'investment': <MaterialIcons name="trending-up" size={size} color={color} />,
+      'gift': <MaterialIcons name="card-giftcard" size={size} color={color} />,
+      'other': <MaterialIcons name="more-horiz" size={size} color={color} />
     };
     return iconMap[iconName] || <MaterialIcons name="category" size={size} color={color} />;
   };
@@ -262,12 +216,364 @@ export default function Dashboard() {
     setPeriod(selectedPeriod);
   };
 
-  if (loading && !refreshing) {
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    scrollContent: {
+      padding: 20,
+      paddingBottom: 100,
+      backgroundColor: theme.surface,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 18,
+    },
+    headerIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: theme.touchable,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 8,
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: theme.text,
+    },
+    headerSubtitle: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      marginBottom: 2,
+    },
+    headerBellWrap: {
+      marginRight: 8,
+      position: 'relative',
+    },
+    bellCircle: {
+      width: 52,
+      height: 52,
+      borderRadius: 16,
+      backgroundColor: theme.card,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#000',
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 2,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    headerDot: {
+      position: 'absolute',
+      top: 6,
+      right: 6,
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: theme.error,
+      borderWidth: 2,
+      borderColor: theme.card,
+    },
+    dashboardCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.card,
+      borderRadius: 18,
+      padding: 18,
+      marginBottom: 18,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    dashboardIconWrap: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: theme.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 16,
+    },
+    dashboardTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: theme.text,
+    },
+    dashboardSubtitle: {
+      fontSize: 13,
+      color: theme.primary,
+      marginBottom: 2,
+    },
+    dashboardDesc: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      lineHeight: 16,
+    },
+    periodRow: {
+      flexDirection: 'row',
+      marginBottom: 24,
+      backgroundColor: theme.card,
+      borderRadius: 12,
+      padding: 4,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    periodBtn: {
+      flex: 1,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: 8,
+      alignItems: 'center',
+    },
+    periodBtnActive: {
+      backgroundColor: theme.primary,
+    },
+    periodBtnText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.textSecondary,
+    },
+    periodBtnTextActive: {
+      color: theme.textInverse,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: theme.text,
+      marginBottom: 12,
+    },
+    spendingCard: {
+      backgroundColor: theme.card,
+      borderRadius: 16,
+      padding: 20,
+      marginBottom: 24,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    donutRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 20,
+    },
+    donutCenter: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    donutAmount: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: theme.text,
+      marginBottom: 4,
+    },
+    donutLabel: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      marginBottom: 2,
+    },
+    donutPeriod: {
+      fontSize: 12,
+      color: theme.textTertiary,
+    },
+    legendGrid: {
+      marginTop: 16,
+    },
+    legendRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    legendDot: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      marginRight: 12,
+    },
+    legendLabel: {
+      flex: 1,
+      fontSize: 14,
+      color: theme.text,
+    },
+    legendValue: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    topCard: {
+      backgroundColor: theme.card,
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 24,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    topRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    topLeft: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    topNum: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: theme.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 12,
+    },
+    topNumText: {
+      fontWeight: 'bold',
+      color: theme.textSecondary,
+    },
+    topIcon: {
+      marginRight: 10,
+    },
+    topLabel: {
+      fontSize: 15,
+      fontWeight: 'bold',
+      color: theme.text,
+    },
+    topSub: {
+      fontSize: 12,
+      color: theme.textSecondary,
+    },
+    topRight: {
+      alignItems: 'flex-end',
+      minWidth: 70,
+    },
+    topValue: {
+      fontSize: 15,
+      fontWeight: 'bold',
+      color: theme.text,
+    },
+    topPercent: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      marginBottom: 2,
+    },
+    topBarBg: {
+      width: 60,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: theme.border,
+      marginTop: 2,
+      overflow: 'hidden',
+    },
+    topBarFill: {
+      height: 6,
+      borderRadius: 3,
+    },
+    summaryCard: {
+      backgroundColor: theme.card,
+      borderRadius: 16,
+      padding: 18,
+      marginBottom: 18,
+      shadowColor: '#000',
+      shadowOpacity: 0.04,
+      shadowRadius: 4,
+      shadowOffset: { width: 0, height: 1 },
+      elevation: 1,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    summaryRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      alignItems: 'center',
+    },
+    summaryItem: {
+      alignItems: 'center',
+    },
+    summaryLabel: {
+      fontSize: 13,
+      color: theme.textSecondary,
+      marginBottom: 4,
+    },
+    summaryValue: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: theme.text,
+    },
+    summaryDivider: {
+      width: 1,
+      height: '80%',
+      backgroundColor: theme.border,
+    },
+    emptyStateContainer: {
+      alignItems: 'center',
+      paddingVertical: 30,
+      paddingHorizontal: 20,
+      backgroundColor: theme.card,
+      borderRadius: 16,
+      shadowColor: '#000',
+      shadowOpacity: 0.04,
+      shadowRadius: 4,
+      shadowOffset: { width: 0, height: 1 },
+      elevation: 1,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    emptyStateIcon: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: theme.surface,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 16,
+      borderWidth: 2,
+      borderColor: theme.primary,
+      borderStyle: 'dashed',
+    },
+    emptyStateTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: theme.text,
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    emptyStateMessage: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      textAlign: 'center',
+      lineHeight: 20,
+      marginBottom: 20,
+      paddingHorizontal: 10,
+    },
+    emptyStateButton: {
+      backgroundColor: theme.primary,
+      borderRadius: 12,
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 5,
+    },
+    emptyStateButtonText: {
+      color: theme.textInverse,
+      fontSize: 14,
+      fontWeight: '600',
+      textAlign: 'center',
+    },
+  });
+
+  if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['top','left','right']}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#4caf50" />
-          <Text style={{ marginTop: 16, color: '#666' }}>Loading dashboard...</Text>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={{ marginTop: 16, color: theme.textSecondary }}>Loading your data...</Text>
         </View>
       </SafeAreaView>
     );
@@ -281,12 +587,11 @@ export default function Dashboard() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4caf50']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} />
         }
       >
         {/* Header */}
         <View style={styles.headerRow}>
-        
           <View style={{ flex: 1 }}>
             <Text style={styles.headerTitle}>Analytics</Text>
             <Text style={styles.headerSubtitle}>Financial Overview</Text>
@@ -294,17 +599,16 @@ export default function Dashboard() {
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <View style={styles.bellCircle}>
               <TouchableOpacity onPress={() => router.push('/components/notifications')}>
-                <Ionicons name="notifications-outline" size={20} color="#B0B0B0" />
+                <Ionicons name="notifications-outline" size={25} color={theme.textSecondary} />
               </TouchableOpacity>
             </View>
-          
           </View>
         </View>
 
         {/* Dashboard Card */}
         <View style={styles.dashboardCard}>
           <View style={styles.dashboardIconWrap}>
-            <FontAwesome5 name="chart-line" size={24} color="#43A047" />
+            <FontAwesome5 name="chart-line" size={24} color={theme.primary} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.dashboardTitle}>Dashboard</Text>
@@ -331,17 +635,17 @@ export default function Dashboard() {
           <View style={styles.summaryRow}>
             <View style={styles.summaryItem}>
               <Text style={styles.summaryLabel}>Income</Text>
-              <Text style={[styles.summaryValue, { color: '#4CAF50' }]}>₹{stats.totalIncome.toFixed(0)}</Text>
+              <Text style={[styles.summaryValue, { color: theme.success }]}>₹{stats.totalIncome.toFixed(0)}</Text>
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryItem}>
               <Text style={styles.summaryLabel}>Expense</Text>
-              <Text style={[styles.summaryValue, { color: '#F44336' }]}>₹{stats.totalExpense.toFixed(0)}</Text>
+              <Text style={[styles.summaryValue, { color: theme.error }]}>₹{stats.totalExpense.toFixed(0)}</Text>
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryItem}>
               <Text style={styles.summaryLabel}>Balance</Text>
-              <Text style={[styles.summaryValue, { color: stats.balance >= 0 ? '#2196F3' : '#F44336' }]}>
+              <Text style={[styles.summaryValue, { color: stats.balance >= 0 ? theme.primary : theme.error }]}>
                 ₹{stats.balance.toFixed(0)}
               </Text>
             </View>
@@ -373,7 +677,7 @@ export default function Dashboard() {
         ) : (
           <View style={styles.emptyStateContainer}>
             <View style={styles.emptyStateIcon}>
-              <FontAwesome5 name="chart-pie" size={40} color="#4caf50" />
+              <FontAwesome5 name="chart-pie" size={40} color={theme.primary} />
             </View>
             <Text style={styles.emptyStateTitle}>No Spending Data</Text>
             <Text style={styles.emptyStateMessage}>
@@ -405,7 +709,7 @@ export default function Dashboard() {
                 <View style={styles.topRight}>
                   <Text style={styles.topValue}>₹{cat.value}</Text>
                   <Text style={styles.topPercent}>{cat.percent}%</Text>
-                  <View style={[styles.topBarBg, { backgroundColor: '#F0F0F0' }]}> 
+                  <View style={[styles.topBarBg, { backgroundColor: theme.border }]}> 
                     <View style={[styles.topBarFill, { backgroundColor: cat.color, width: `${cat.percent}%` }]} />
                   </View>
                 </View>
@@ -415,7 +719,7 @@ export default function Dashboard() {
         ) : (
           <View style={styles.emptyStateContainer}>
             <View style={styles.emptyStateIcon}>
-              <FontAwesome5 name="trophy" size={40} color="#4caf50" />
+              <FontAwesome5 name="trophy" size={40} color={theme.primary} />
             </View>
             <Text style={styles.emptyStateTitle}>No Top Categories</Text>
             <Text style={styles.emptyStateMessage}>
@@ -433,366 +737,3 @@ export default function Dashboard() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 100, // Increased padding to account for tab bar
- 
-    backgroundColor: '#F8F9FB',
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 18,
-  },
-  headerIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#F5F5F5',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#222',
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#888',
-    marginBottom: 2,
-  },
-  headerBellWrap: {
-    marginRight: 8,
-    position: 'relative',
-  },
-  bellCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: 'white',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  headerDot: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#FF3B30',
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
-  dashboardCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E8F5E9',
-    borderRadius: 18,
-    padding: 18,
-    marginBottom: 18,
-  },
-  dashboardIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-  },
-  dashboardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#222',
-  },
-  dashboardSubtitle: {
-    fontSize: 13,
-    color: '#43A047',
-    marginBottom: 2,
-  },
-  dashboardDesc: {
-    fontSize: 13,
-    color: '#888',
-    marginTop: 2,
-  },
-  periodRow: {
-    flexDirection: 'row',
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
-    marginBottom: 18,
-    padding: 4,
-    alignSelf: 'flex-start',
-  },
-  periodBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 18,
-    borderRadius: 10,
-    backgroundColor: 'transparent',
-  },
-  periodBtnActive: {
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
-  },
-  periodBtnText: {
-    color: '#888',
-    fontWeight: 'bold',
-    fontSize: 15,
-  },
-  periodBtnTextActive: {
-    color: '#222',
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#222',
-    marginBottom: 12,
-    marginTop: 8,
-  },
-  spendingCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 18,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
-  },
-  donutRow: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  donutCenter: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 38,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  donutAmount: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#222',
-  },
-  donutLabel: {
-    fontSize: 13,
-    color: '#888',
-  },
-  donutPeriod: {
-    fontSize: 11,
-    color: '#888',
-    marginTop: 2,
-  },
-  legendGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginTop: 8,
-  },
-  legendRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '48%',
-    marginBottom: 6,
-  },
-  legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 8,
-  },
-  legendLabel: {
-    fontSize: 14,
-    color: '#222',
-    flex: 1,
-  },
-  legendValue: {
-    fontSize: 14,
-    color: '#222',
-    fontWeight: 'bold',
-  },
-  topCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 14,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
-  },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 18,
-  },
-  topLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  topNum: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#F5F5F5',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-  topNumText: {
-    fontWeight: 'bold',
-    color: '#888',
-  },
-  topIcon: {
-    marginRight: 10,
-  },
-  topLabel: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#222',
-  },
-  topSub: {
-    fontSize: 12,
-    color: '#888',
-  },
-  topRight: {
-    alignItems: 'flex-end',
-    minWidth: 70,
-  },
-  topValue: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#222',
-  },
-  topPercent: {
-    fontSize: 12,
-    color: '#888',
-    marginBottom: 2,
-  },
-  topBarBg: {
-    width: 60,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#F0F0F0',
-    marginTop: 2,
-    overflow: 'hidden',
-  },
-  topBarFill: {
-    height: 6,
-    borderRadius: 3,
-  },
-  // Summary Card Styles
-  summaryCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 18,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-  },
-  summaryItem: {
-    alignItems: 'center',
-  },
-  summaryLabel: {
-    fontSize: 13,
-    color: '#888',
-    marginBottom: 4,
-  },
-  summaryValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#222',
-  },
-  summaryDivider: {
-    width: 1,
-    height: '80%',
-    backgroundColor: '#E0E0E0',
-  },
-  // Empty state styles
-  emptyStateContainer: {
-    alignItems: 'center',
-    paddingVertical: 30,
-    paddingHorizontal: 20,
-    backgroundColor: 'white',
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
-  },
-  emptyStateIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#f0f9ff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    borderWidth: 2,
-    borderColor: '#4caf50',
-    borderStyle: 'dashed',
-  },
-  emptyStateTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#101828',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptyStateMessage: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 20,
-    paddingHorizontal: 10,
-  },
-  emptyStateButton: {
-    backgroundColor: '#4caf50',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    shadowColor: '#4caf50',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  emptyStateButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-}); 

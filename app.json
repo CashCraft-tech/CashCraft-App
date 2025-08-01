@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "CashCraft",
-    "slug": "cashcraft",
+    "slug": "bachat",
     "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "cashcraft",
@@ -15,6 +15,7 @@
     },
     "android": {
       "package": "com.cashcraft.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -32,8 +33,7 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
+          "resizeMode": "cover",
           "backgroundColor": "#ffffff"
         }
       ],
@@ -41,8 +41,7 @@
         "expo-notifications",
         {
           "icon": "./assets/images/notification-icon.png",
-          "color": "#4caf50",
-          "sounds": ["./assets/sounds/notification.wav"]
+          "color": "#4caf50"
         }
       ]
     ],
@@ -54,6 +53,7 @@
       "eas": {
         "projectId": "e9b9481b-8889-42b9-a96f-87f0961cbe8d"
       }
-    }
+    },
+    "owner": "prasad19"
   }
 }

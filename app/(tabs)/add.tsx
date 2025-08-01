@@ -2,10 +2,12 @@ import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, FlatList, Platform, Alert, ActivityIndicator } from "react-native";
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { categoriesService, Category } from '../services/categoriesService';
 import { transactionsService } from '../services/transactionsService';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { router } from 'expo-router';
 import { notificationService } from '../services/notificationService';
 
@@ -19,6 +21,72 @@ const PAYMENT_TYPES = [
 
 export default function Add() {
   const { user } = useAuth();
+  const { theme } = useTheme();
+  
+  const styles = StyleSheet.create({
+    scrollContent: { 
+      paddingTop: 24, 
+      paddingBottom: 80,
+      paddingHorizontal: 20, 
+      backgroundColor: theme.surface
+    },
+    label: { fontSize: 14, color: theme.text, fontWeight: 'bold', marginBottom: 6, marginTop: 16 },
+    toggleRow: { flexDirection: 'row', backgroundColor: theme.touchable, borderRadius: 16, padding: 4, marginBottom: 12 },
+    toggleBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, borderRadius: 12 },
+    toggleBtnActive: { backgroundColor: theme.card, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1, borderWidth: 1, borderColor: theme.border },
+    toggleBtnText: { marginLeft: 8, fontWeight: 'bold', color: theme.textSecondary, fontSize: 15 },
+    toggleBtnTextActive: { color: theme.text },
+    dropdown: { backgroundColor: theme.card, borderRadius: 10, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, borderWidth: 1, borderColor: theme.border },
+    dropdownText: { color: theme.textSecondary, fontSize: 15 },
+    dropdownList: { backgroundColor: theme.card, borderRadius: 10, marginBottom: 8, borderWidth: 1, borderColor: theme.border, overflow: 'hidden' },
+    dropdownItem: { flexDirection: 'row', alignItems: 'center', padding: 14, borderBottomWidth: 1, borderColor: theme.borderLight },
+    dropdownItemText: { marginLeft: 12, fontSize: 15, color: theme.text },
+    amountRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.card, borderRadius: 10, paddingHorizontal: 14, marginBottom: 8, borderWidth: 1, borderColor: theme.border },
+    currency: { fontSize: 18, color: theme.textSecondary, marginRight: 6 },
+    amountInput: { flex: 1, fontSize: 18, color: theme.text, paddingVertical: 12 },
+    input: { backgroundColor: theme.card, borderRadius: 10, padding: 14, fontSize: 15, color: theme.text, marginBottom: 8, borderWidth: 1, borderColor: theme.border },
+    row: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+    dateBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.card, borderRadius: 10, padding: 14, borderWidth: 1, borderColor: theme.border },
+    dateText: { color: theme.text, fontSize: 15 },
+    receiptBox: { backgroundColor: theme.card, borderRadius: 12, borderWidth: 1, borderColor: theme.border, alignItems: 'center', justifyContent: 'center', padding: 24, marginBottom: 16, marginTop: 4 },
+    receiptText: { color: theme.text, fontWeight: 'bold', fontSize: 15, marginTop: 8 },
+    receiptSub: { color: theme.textSecondary, fontSize: 13, marginTop: 2 },
+    actionRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, gap: 12 },
+    cancelBtn: { flex: 1, backgroundColor: theme.card, borderRadius: 8, borderWidth: 1, borderColor: theme.border, paddingVertical: 16, alignItems: 'center', marginRight: 4 },
+    cancelBtnText: { color: theme.text, fontWeight: 'bold', fontSize: 16 },
+    saveBtn: { flex: 1, backgroundColor: theme.primary, borderRadius: 8, paddingVertical: 16, alignItems: 'center', marginLeft: 4 },
+    saveBtnText: { color: theme.textInverse, fontWeight: 'bold', fontSize: 16 },
+    bellCircle: {
+      width: 52,
+      height: 52,
+      borderRadius: 16,
+      backgroundColor: theme.card,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#000',
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 2,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    comingSoonBadge: {
+      position: 'absolute',
+      top: 8,
+      right: 8,
+      backgroundColor: theme.warning,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+    },
+    comingSoonText: {
+      color: theme.textInverse,
+      fontSize: 10,
+      fontWeight: 'bold',
+    },
+  });
+
   const [transactionType, setTransactionType] = useState<'Expense' | 'Income'>('Expense');
   const [paymentType, setPaymentType] = useState<string | null>(null);
   const [category, setCategory] = useState<string | null>(null);
@@ -26,8 +94,25 @@ export default function Add() {
   const [amount, setAmount] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState('');
-  const [time, setTime] = useState('');
+  // Helper function to get today's date in DD-MM-YYYY format
+  const getTodayDate = () => {
+    const today = new Date();
+    const day = String(today.getDate()).padStart(2, '0');
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const year = today.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
+
+  // Helper function to get current time in HH:MM format
+  const getCurrentTime = () => {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+
+  const [date, setDate] = useState(getTodayDate());
+  const [time, setTime] = useState(getCurrentTime());
   const [receipt, setReceipt] = useState<any>(null);
   const [paymentDropdown, setPaymentDropdown] = useState(false);
   const [categoryDropdown, setCategoryDropdown] = useState(false);
@@ -127,18 +212,20 @@ export default function Add() {
         description: title,
         date: transactionDate,
         notes: description,
+        payment: paymentType || 'Not specified',
+        time: time, // Store time separately for easier access
       };
 
       await transactionsService.addTransaction(transaction);
       // No notification for transaction added - only low balance alerts
       Alert.alert('Success', 'Transaction added successfully!');
       
-      // Reset form
+      // Reset form but keep current date and time
       setAmount('');
       setTitle('');
       setDescription('');
-      setDate('');
-      setTime('');
+      setDate(getTodayDate()); // Keep current date
+      setTime(getCurrentTime()); // Keep current time
       setPaymentType(null);
       setSelectedCategory(null);
       setCategory(null);
@@ -166,7 +253,8 @@ export default function Add() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, }} edges={['top','left','right','bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }} edges={['top','left','right','bottom']}>
+      <StatusBar style={theme.statusBarStyle} />
       <KeyboardAwareScrollView
         contentContainerStyle={styles.scrollContent}
         enableOnAndroid={true}
@@ -176,12 +264,12 @@ export default function Add() {
       >
         <View style={{ marginBottom: 24, marginTop: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View>
-            <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#222', marginBottom: 4 }}>Add Transaction</Text>
-            <Text style={{ fontSize: 14, color: '#666' }}>Log your expense or income below</Text>
+            <Text style={{ fontSize: 18, fontWeight: 'bold', color: theme.text, marginBottom: 4 }}>Add Transaction</Text>
+            <Text style={{ fontSize: 14, color: theme.textSecondary }}>Log your expense or income below</Text>
           </View>
           <View style={styles.bellCircle}>
             <TouchableOpacity onPress={() => router.push('/components/notifications')}>
-              <Ionicons name="notifications-outline" size={25} color="#B0B0B0" />
+              <Ionicons name="notifications-outline" size={25} color={theme.textSecondary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -191,14 +279,14 @@ export default function Add() {
               style={[styles.toggleBtn, transactionType === 'Expense' && styles.toggleBtnActive]}
               onPress={() => setTransactionType('Expense')}
             >
-              <Ionicons name="remove-circle" size={24} color={transactionType === 'Expense' ? '#FF5252' : '#ccc'} />
+              <Ionicons name="remove-circle" size={24} color={transactionType === 'Expense' ? theme.error : theme.textTertiary} />
               <Text style={[styles.toggleBtnText, transactionType === 'Expense' && styles.toggleBtnTextActive]}>Expense</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.toggleBtn, transactionType === 'Income' && styles.toggleBtnActive]}
               onPress={() => setTransactionType('Income')}
             >
-              <Ionicons name="add-circle" size={24} color={transactionType === 'Income' ? '#43A047' : '#ccc'} />
+              <Ionicons name="add-circle" size={24} color={transactionType === 'Income' ? theme.success : theme.textTertiary} />
               <Text style={[styles.toggleBtnText, transactionType === 'Income' && styles.toggleBtnTextActive]}>Income</Text>
             </TouchableOpacity>
           </View>
@@ -207,7 +295,7 @@ export default function Add() {
           <Text style={styles.label}>Payment Type</Text>
           <TouchableOpacity style={styles.dropdown} onPress={() => setPaymentDropdown(!paymentDropdown)}>
             <Text style={styles.dropdownText}>{paymentType || 'Select Payment Type'}</Text>
-            <Ionicons name={paymentDropdown ? 'chevron-up' : 'chevron-down'} size={20} color="#888" />
+            <Ionicons name={paymentDropdown ? 'chevron-up' : 'chevron-down'} size={20} color={theme.textSecondary} />
           </TouchableOpacity>
           {paymentDropdown && (
             <View style={styles.dropdownList}>
@@ -228,7 +316,7 @@ export default function Add() {
           <Text style={styles.label}>Category</Text>
           <TouchableOpacity style={styles.dropdown} onPress={() => setCategoryDropdown(!categoryDropdown)}>
             <Text style={styles.dropdownText}>{category || 'Select a category'}</Text>
-            <Ionicons name={categoryDropdown ? 'chevron-up' : 'chevron-down'} size={20} color="#888" />
+            <Ionicons name={categoryDropdown ? 'chevron-up' : 'chevron-down'} size={20} color={theme.textSecondary} />
           </TouchableOpacity>
           {categoryDropdown && (
             <View style={styles.dropdownList}>
@@ -279,39 +367,39 @@ export default function Add() {
           {/* Date & Time */}
           <View style={styles.row}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.label}>Date</Text>
+              <Text style={styles.label}>Date <Text style={{ color: theme.textSecondary, fontWeight: 'normal' }}>(Today)</Text></Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { marginBottom: 0 }]}
                 placeholder="DD-MM-YYYY"
                 value={date}
                 onChangeText={text => setDate(formatDateInput(text))}
                 keyboardType="numeric"
                 maxLength={10}
               />
-              {dateError ? <Text style={{ color: '#FF5252', fontSize: 13, marginTop: 2 }}>{dateError}</Text> : null}
+              {dateError ? <Text style={{ color: theme.error, fontSize: 13, marginTop: 2 }}>{dateError}</Text> : null}
             </View>
             <View style={{ width: 16 }} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.label}>Time</Text>
+              <Text style={styles.label}>Time <Text style={{ color: theme.textSecondary, fontWeight: 'normal' }}>(Now)</Text></Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { marginBottom: 0 }]}
                 placeholder="HH:MM"
                 value={time}
                 onChangeText={text => setTime(formatTimeInput(text))}
                 keyboardType="numeric"
                 maxLength={5}
               />
-              {timeError ? <Text style={{ color: '#FF5252', fontSize: 13, marginTop: 2 }}>{timeError}</Text> : null}
+              {timeError ? <Text style={{ color: theme.error, fontSize: 13, marginTop: 2 }}>{timeError}</Text> : null}
             </View>
           </View>
 
           {/* Receipt Upload */}
-          <Text style={styles.label}>Receipt <Text style={{ color: '#888' }}>(Optional)</Text></Text>
+          <Text style={styles.label}>Receipt <Text style={{ color: theme.textSecondary }}>(Optional)</Text></Text>
           <TouchableOpacity 
             style={styles.receiptBox}
             onPress={() => Alert.alert('Feature Coming Soon!', 'Receipt upload functionality will be available in the next update.')}
           >
-            <Ionicons name="cloud-upload-outline" size={32} color="#B0B0B0" />
+            <Ionicons name="cloud-upload-outline" size={32} color={theme.textSecondary} />
             <Text style={styles.receiptText}>Add Receipt</Text>
             <Text style={styles.receiptSub}>Take a photo or upload from gallery</Text>
             <View style={styles.comingSoonBadge}>
@@ -324,9 +412,9 @@ export default function Add() {
             <TouchableOpacity style={styles.cancelBtn}>
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.saveBtn, !canSave && { backgroundColor: '#E0E0E0' }]} disabled={!canSave || loading} onPress={handleSaveTransaction}>
+            <TouchableOpacity style={[styles.saveBtn, !canSave && { backgroundColor: theme.border }]} disabled={!canSave || loading} onPress={handleSaveTransaction}>
               {loading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={theme.textInverse} />
               ) : (
                 <Text style={styles.saveBtnText}>Save Transaction</Text>
               )}
@@ -336,65 +424,3 @@ export default function Add() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  scrollContent: { 
-    paddingTop: 24, 
-    paddingBottom: 80, // extra space for tab bar
-    paddingHorizontal: 20, 
-    backgroundColor: '#F8F9FB'
-  },
-  label: { fontSize: 14, color: '#222', fontWeight: 'bold', marginBottom: 6, marginTop: 16 },
-  toggleRow: { flexDirection: 'row', backgroundColor: '#F5F5F5', borderRadius: 16, padding: 4, marginBottom: 12 },
-  toggleBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, borderRadius: 12 },
-  toggleBtnActive: { backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
-  toggleBtnText: { marginLeft: 8, fontWeight: 'bold', color: '#888', fontSize: 15 },
-  toggleBtnTextActive: { color: '#222' },
-  dropdown: { backgroundColor: '#fff', borderRadius: 10, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, borderWidth: 1, borderColor: '#E0E0E0' },
-  dropdownText: { color: '#888', fontSize: 15 },
-  dropdownList: { backgroundColor: '#fff', borderRadius: 10, marginBottom: 8, borderWidth: 1, borderColor: '#E0E0E0', overflow: 'hidden' },
-  dropdownItem: { flexDirection: 'row', alignItems: 'center', padding: 14, borderBottomWidth: 1, borderColor: '#F0F0F0' },
-  dropdownItemText: { marginLeft: 12, fontSize: 15, color: '#222' },
-  amountRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 10, paddingHorizontal: 14, marginBottom: 8, borderWidth: 1, borderColor: '#E0E0E0' },
-  currency: { fontSize: 18, color: '#888', marginRight: 6 },
-  amountInput: { flex: 1, fontSize: 18, color: '#222', paddingVertical: 12 },
-  input: { backgroundColor: '#fff', borderRadius: 10, padding: 14, fontSize: 15, color: '#222', marginBottom: 8, borderWidth: 1, borderColor: '#E0E0E0' },
-  row: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  dateBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#E0E0E0' },
-  dateText: { color: '#222', fontSize: 15 },
-  receiptBox: { backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#E0E0E0', alignItems: 'center', justifyContent: 'center', padding: 24, marginBottom: 16, marginTop: 4 },
-  receiptText: { color: '#222', fontWeight: 'bold', fontSize: 15, marginTop: 8 },
-  receiptSub: { color: '#888', fontSize: 13, marginTop: 2 },
-  actionRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, gap: 12 },
-  cancelBtn: { flex: 1, backgroundColor: '#fff', borderRadius: 8, borderWidth: 1, borderColor: '#E0E0E0', paddingVertical: 16, alignItems: 'center', marginRight: 4 },
-  cancelBtnText: { color: '#222', fontWeight: 'bold', fontSize: 16 },
-  saveBtn: { flex: 1, backgroundColor: '#222', borderRadius: 8, paddingVertical: 16, alignItems: 'center', marginLeft: 4 },
-  saveBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  bellCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: 'white',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  comingSoonBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: '#FF9800',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  comingSoonText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-}); 

@@ -40,6 +40,8 @@ export interface Transaction {
   date: Date | any; // Allow both Date and Firestore Timestamp
   location?: string;
   notes?: string;
+  payment?: string; // Payment method (Cash, Credit Card, etc.)
+  time?: string; // Time in HH:MM format
   createdAt?: any;
   updatedAt?: any;
 }

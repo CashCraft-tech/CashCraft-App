@@ -4,10 +4,13 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useTheme } from '../context/ThemeContext';
 import { contactService } from '../services/supportService';
 import { useAuth } from '../context/AuthContext';
 
 export default function ContactSupport() {
+  const { theme } = useTheme();
   const { user } = useAuth();
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
@@ -80,23 +83,22 @@ export default function ContactSupport() {
   ];
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={['top','left','right','bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top','left','right','bottom']}>
+      <StatusBar style={theme.statusBarStyle} />
       <KeyboardAwareScrollView
         contentContainerStyle={{
-      
           paddingBottom: 40,
-       
         }}
         enableOnAndroid={true}
         extraScrollHeight={20}
         keyboardShouldPersistTaps="handled"
         enableAutomaticScroll={true}
       >
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#333" />
+            <Ionicons name="arrow-back" size={24} color={theme.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Contact Support</Text>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>Contact Support</Text>
           <View style={styles.placeholder} />
         </View>
 
@@ -107,7 +109,8 @@ export default function ContactSupport() {
               key={method.id}
               style={[
                 styles.contactMethodCard,
-                contactMethod === method.id && styles.selectedMethod
+                { backgroundColor: theme.card },
+                contactMethod === method.id && { borderColor: theme.primary }
               ]}
               onPress={() => setContactMethod(method.id)}
             >
@@ -115,12 +118,13 @@ export default function ContactSupport() {
                 <Ionicons name={method.icon as any} size={24} color={method.color} />
               </View>
               <View style={styles.methodContent}>
-                <Text style={styles.methodTitle}>{method.title}</Text>
-                <Text style={styles.methodSubtitle}>{method.subtitle}</Text>
-                <Text style={styles.methodDescription}>{method.description}</Text>
+                <Text style={[styles.methodTitle, { color: theme.text }]}>{method.title}</Text>
+                <Text style={[styles.methodSubtitle, { color: theme.textSecondary }]}>{method.subtitle}</Text>
+                <Text style={[styles.methodDescription, { color: theme.textTertiary }]}>{method.description}</Text>
               </View>
               <View style={[
                 styles.radioButton,
+                { borderColor: theme.border },
                 contactMethod === method.id && { borderColor: method.color }
               ]}>
                 {contactMethod === method.id && (
@@ -133,35 +137,43 @@ export default function ContactSupport() {
 
         {/* Contact Form */}
         {contactMethod === 'email' && (
-          <View style={styles.formSection}>
-            <Text style={styles.formTitle}>Send us a message</Text>
+          <View style={[styles.formSection, { backgroundColor: theme.card }]}>
+            <Text style={[styles.formTitle, { color: theme.text }]}>Send us a message</Text>
             
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Subject</Text>
+              <Text style={[styles.inputLabel, { color: theme.text }]}>Subject</Text>
               <TextInput
-                style={styles.textInput}
+                style={[styles.textInput, { 
+                  borderColor: theme.border, 
+                  color: theme.text, 
+                  backgroundColor: theme.background 
+                }]}
                 placeholder="Brief description of your issue"
                 value={subject}
                 onChangeText={setSubject}
-                placeholderTextColor="#888"
+                placeholderTextColor={theme.textTertiary}
               />
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Message</Text>
+              <Text style={[styles.inputLabel, { color: theme.text }]}>Message</Text>
               <TextInput
-                style={[styles.textInput, styles.messageInput]}
+                style={[styles.textInput, styles.messageInput, { 
+                  borderColor: theme.border, 
+                  color: theme.text, 
+                  backgroundColor: theme.background 
+                }]}
                 placeholder="Please describe your issue in detail..."
                 value={message}
                 onChangeText={setMessage}
                 multiline
                 numberOfLines={6}
                 textAlignVertical="top"
-                placeholderTextColor="#888"
+                placeholderTextColor={theme.textTertiary}
               />
             </View>
 
-            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} disabled={loading}>
+            <TouchableOpacity style={[styles.submitButton, { backgroundColor: theme.primary }]} onPress={handleSubmit} disabled={loading}>
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
@@ -173,13 +185,13 @@ export default function ContactSupport() {
 
         {/* Direct Contact Info */}
         {contactMethod === 'chat' && (
-          <View style={styles.directContact}>
+          <View style={[styles.directContact, { backgroundColor: theme.card }]}>
             <View style={styles.contactInfoCard}>
               <Ionicons name="time" size={24} color="#2196f3" />
-              <Text style={styles.contactInfoTitle}>Live Chat Hours</Text>
-              <Text style={styles.contactInfoText}>Monday - Friday: 9:00 AM - 6:00 PM IST</Text>
-              <Text style={styles.contactInfoText}>Saturday: 10:00 AM - 4:00 PM IST</Text>
-              <Text style={styles.contactInfoText}>Sunday: Closed</Text>
+              <Text style={[styles.contactInfoTitle, { color: theme.text }]}>Live Chat Hours</Text>
+              <Text style={[styles.contactInfoText, { color: theme.textSecondary }]}>Monday - Friday: 9:00 AM - 6:00 PM IST</Text>
+              <Text style={[styles.contactInfoText, { color: theme.textSecondary }]}>Saturday: 10:00 AM - 4:00 PM IST</Text>
+              <Text style={[styles.contactInfoText, { color: theme.textSecondary }]}>Sunday: Closed</Text>
             </View>
             
             <TouchableOpacity style={styles.chatButton}>
@@ -190,13 +202,13 @@ export default function ContactSupport() {
         )}
 
         {contactMethod === 'call' && (
-          <View style={styles.directContact}>
+          <View style={[styles.directContact, { backgroundColor: theme.card }]}>
             <View style={styles.contactInfoCard}>
               <Ionicons name="call" size={24} color="#ff9800" />
-              <Text style={styles.contactInfoTitle}>Call Us</Text>
-              <Text style={styles.contactInfoText}>Support: +91 1800-123-4567</Text>
-              <Text style={styles.contactInfoText}>Technical: +91 1800-123-4568</Text>
-              <Text style={styles.contactInfoText}>Available: 9:00 AM - 6:00 PM IST</Text>
+              <Text style={[styles.contactInfoTitle, { color: theme.text }]}>Call Us</Text>
+              <Text style={[styles.contactInfoText, { color: theme.textSecondary }]}>Support: +91 1800-123-4567</Text>
+              <Text style={[styles.contactInfoText, { color: theme.textSecondary }]}>Technical: +91 1800-123-4568</Text>
+              <Text style={[styles.contactInfoText, { color: theme.textSecondary }]}>Available: 9:00 AM - 6:00 PM IST</Text>
             </View>
             
             <TouchableOpacity style={styles.callButton}>
@@ -207,19 +219,19 @@ export default function ContactSupport() {
         )}
 
         {/* Additional Info */}
-        <View style={styles.additionalInfo}>
-          <Text style={styles.additionalInfoTitle}>Before contacting us</Text>
+        <View style={[styles.additionalInfo, { backgroundColor: theme.card }]}>
+          <Text style={[styles.additionalInfoTitle, { color: theme.text }]}>Before contacting us</Text>
           <View style={styles.infoItem}>
-            <MaterialIcons name="check-circle" size={16} color="#4caf50" />
-            <Text style={styles.infoText}>Check our Help Center for quick answers</Text>
+            <MaterialIcons name="check-circle" size={16} color={theme.primary} />
+            <Text style={[styles.infoText, { color: theme.textSecondary }]}>Check our Help Center for quick answers</Text>
           </View>
           <View style={styles.infoItem}>
-            <MaterialIcons name="check-circle" size={16} color="#4caf50" />
-            <Text style={styles.infoText}>Have your account details ready</Text>
+            <MaterialIcons name="check-circle" size={16} color={theme.primary} />
+            <Text style={[styles.infoText, { color: theme.textSecondary }]}>Have your account details ready</Text>
           </View>
           <View style={styles.infoItem}>
-            <MaterialIcons name="check-circle" size={16} color="#4caf50" />
-            <Text style={styles.infoText}>Include screenshots if reporting a bug</Text>
+            <MaterialIcons name="check-circle" size={16} color={theme.primary} />
+            <Text style={[styles.infoText, { color: theme.textSecondary }]}>Include screenshots if reporting a bug</Text>
           </View>
         </View>
       </KeyboardAwareScrollView>
@@ -230,7 +242,6 @@ export default function ContactSupport() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FB',
   },
   scrollView: {
     flex: 1,
@@ -241,9 +252,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
   },
   backButton: {
     padding: 4,
@@ -251,7 +260,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
   },
   placeholder: {
     width: 32,
@@ -263,7 +271,6 @@ const styles = StyleSheet.create({
   contactMethodCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -272,10 +279,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-  },
-  selectedMethod: {
-    borderWidth: 2,
-    borderColor: '#4caf50',
   },
   methodIcon: {
     width: 48,
@@ -291,17 +294,14 @@ const styles = StyleSheet.create({
   methodTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 4,
   },
   methodSubtitle: {
     fontSize: 14,
-    color: '#666',
     marginBottom: 4,
   },
   methodDescription: {
     fontSize: 12,
-    color: '#888',
     lineHeight: 16,
   },
   radioButton: {
@@ -309,7 +309,6 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#E0E0E0',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -319,7 +318,6 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   formSection: {
-    backgroundColor: '#fff',
     marginHorizontal: 20,
     marginVertical: 16,
     borderRadius: 12,
@@ -333,7 +331,6 @@ const styles = StyleSheet.create({
   formTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 20,
   },
   inputContainer: {
@@ -342,25 +339,20 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#333',
     marginBottom: 8,
   },
   textInput: {
     borderWidth: 1,
-    borderColor: '#E0E0E0',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#333',
-    backgroundColor: '#fff',
   },
   messageInput: {
     height: 120,
     textAlignVertical: 'top',
   },
   submitButton: {
-    backgroundColor: '#4caf50',
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
@@ -372,7 +364,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   directContact: {
-    backgroundColor: '#fff',
     marginHorizontal: 20,
     marginVertical: 16,
     borderRadius: 12,
@@ -390,13 +381,11 @@ const styles = StyleSheet.create({
   contactInfoTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
     marginTop: 12,
     marginBottom: 8,
   },
   contactInfoText: {
     fontSize: 14,
-    color: '#666',
     textAlign: 'center',
     marginBottom: 4,
   },
@@ -429,7 +418,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   additionalInfo: {
-    backgroundColor: '#fff',
     marginHorizontal: 20,
     marginVertical: 16,
     borderRadius: 12,
@@ -443,7 +431,6 @@ const styles = StyleSheet.create({
   additionalInfoTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 12,
   },
   infoItem: {
@@ -453,7 +440,6 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 14,
-    color: '#666',
     marginLeft: 8,
   },
 }); 

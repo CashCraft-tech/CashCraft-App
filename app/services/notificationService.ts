@@ -1,5 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { doc, setDoc, getDoc, addDoc, collection } from 'firebase/firestore';
 import { db, auth } from '../firebaseConfig';
@@ -15,6 +16,8 @@ Notifications.setNotificationHandler({
   }),
 });
 
+const NOTIFICATION_PREFERENCE_KEY = 'push_notification_enabled';
+
 export interface NotificationToken {
   token: string;
   platform: 'ios' | 'android' | 'web';
@@ -22,7 +25,111 @@ export interface NotificationToken {
   userId?: string;
 }
 
-export const notificationService = {
+class NotificationServiceImpl {
+  
+  // Check if push notifications are enabled (user preference)
+  async isPushEnabled(): Promise<boolean> {
+    try {
+      const stored = await AsyncStorage.getItem(NOTIFICATION_PREFERENCE_KEY);
+      if (stored !== null) {
+        return JSON.parse(stored);
+      }
+      
+      // If no stored preference, check system permission
+      const { status } = await Notifications.getPermissionsAsync();
+      return status === 'granted';
+    } catch (error) {
+      console.error('Error checking push notification status:', error);
+      return false;
+    }
+  }
+
+  // Enable push notifications
+  async enablePushNotifications(): Promise<{ success: boolean; error?: string }> {
+    try {
+      // First, request permissions if not already granted
+      const { status } = await Notifications.getPermissionsAsync();
+      
+      if (status !== 'granted') {
+        const { status: newStatus } = await Notifications.requestPermissionsAsync();
+        if (newStatus !== 'granted') {
+          return {
+            success: false,
+            error: 'Permission denied. Please enable notifications in your device settings.'
+          };
+        }
+      }
+
+      // Store the preference
+      await AsyncStorage.setItem(NOTIFICATION_PREFERENCE_KEY, JSON.stringify(true));
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error enabling push notifications:', error);
+      return {
+        success: false,
+        error: 'Failed to enable push notifications'
+      };
+    }
+  }
+
+  // Disable push notifications
+  async disablePushNotifications(): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Store the preference as disabled
+      await AsyncStorage.setItem(NOTIFICATION_PREFERENCE_KEY, JSON.stringify(false));
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error disabling push notifications:', error);
+      return {
+        success: false,
+        error: 'Failed to disable push notifications'
+      };
+    }
+  }
+
+  // Toggle push notifications
+  async togglePushNotifications(): Promise<{ success: boolean; enabled: boolean; error?: string }> {
+    try {
+      const currentlyEnabled = await this.isPushEnabled();
+      
+      if (currentlyEnabled) {
+        const result = await this.disablePushNotifications();
+        return {
+          success: result.success,
+          enabled: false,
+          error: result.error
+        };
+      } else {
+        const result = await this.enablePushNotifications();
+        return {
+          success: result.success,
+          enabled: true,
+          error: result.error
+        };
+      }
+    } catch (error) {
+      console.error('Error toggling push notifications:', error);
+      return {
+        success: false,
+        enabled: false,
+        error: 'Failed to toggle push notifications'
+      };
+    }
+  }
+
+  // Get current notification permission status
+  async getPermissionStatus(): Promise<Notifications.PermissionStatus> {
+    try {
+      const { status } = await Notifications.getPermissionsAsync();
+      return status;
+    } catch (error) {
+      console.error('Error getting permission status:', error);
+      return 'undetermined' as Notifications.PermissionStatus;
+    }
+  }
+
   // Request notification permissions
   async requestPermissions(): Promise<boolean> {
     try {
@@ -57,7 +164,7 @@ export const notificationService = {
       console.error('Error requesting notification permissions:', error);
       return false;
     }
-  },
+  }
 
   // Get push notification token
   async getPushToken(): Promise<string | null> {
@@ -79,7 +186,7 @@ export const notificationService = {
       console.error('Error getting push token:', error);
       return null;
     }
-  },
+  }
 
   // Save notification token to Firestore
   async saveTokenToFirestore(userId: string, token: string): Promise<boolean> {
@@ -100,7 +207,7 @@ export const notificationService = {
       console.error('Error saving notification token:', error);
       return false;
     }
-  },
+  }
 
   // Get notification token from Firestore
   async getTokenFromFirestore(userId: string): Promise<NotificationToken | null> {
@@ -114,11 +221,18 @@ export const notificationService = {
       console.error('Error getting notification token:', error);
       return null;
     }
-  },
+  }
 
   // Send local notification and save to Firestore
   async sendLocalNotification(title: string, body: string, data?: any): Promise<string | null> {
     try {
+      // Check if notifications are enabled by user
+      const isEnabled = await this.isPushEnabled();
+      if (!isEnabled) {
+        console.log('Notifications disabled by user, skipping local notification');
+        return null;
+      }
+
       console.log('Sending local notification:', { title, body });
       
       const notificationId = await Notifications.scheduleNotificationAsync({
@@ -141,7 +255,7 @@ export const notificationService = {
       console.error('Error sending local notification:', error);
       return null;
     }
-  },
+  }
 
   // Save notification to Firestore
   async saveNotificationToFirestore(title: string, body: string, data?: any): Promise<void> {
@@ -170,7 +284,7 @@ export const notificationService = {
     } catch (error) {
       console.error('Error saving notification to Firestore:', error);
     }
-  },
+  }
 
   // Schedule notification for later
   async scheduleNotification(
@@ -180,6 +294,13 @@ export const notificationService = {
     data?: any
   ): Promise<string | null> {
     try {
+      // Check if notifications are enabled by user
+      const isEnabled = await this.isPushEnabled();
+      if (!isEnabled) {
+        console.log('Notifications disabled by user, skipping scheduled notification');
+        return null;
+      }
+
       console.log('Scheduling notification:', { title, body, trigger });
       
       const notificationId = await Notifications.scheduleNotificationAsync({
@@ -198,7 +319,7 @@ export const notificationService = {
       console.error('Error scheduling notification:', error);
       return null;
     }
-  },
+  }
 
   // Cancel scheduled notification
   async cancelNotification(notificationId: string): Promise<boolean> {
@@ -210,7 +331,7 @@ export const notificationService = {
       console.error('Error cancelling notification:', error);
       return false;
     }
-  },
+  }
 
   // Cancel all scheduled notifications
   async cancelAllNotifications(): Promise<boolean> {
@@ -222,7 +343,7 @@ export const notificationService = {
       console.error('Error cancelling all notifications:', error);
       return false;
     }
-  },
+  }
 
   // Get all scheduled notifications
   async getScheduledNotifications(): Promise<Notifications.NotificationRequest[]> {
@@ -234,7 +355,7 @@ export const notificationService = {
       console.error('Error getting scheduled notifications:', error);
       return [];
     }
-  },
+  }
 
   // Initialize notifications for a user
   async initializeForUser(userId: string): Promise<boolean> {
@@ -268,7 +389,7 @@ export const notificationService = {
       console.error('Error initializing notifications:', error);
       return false;
     }
-  },
+  }
 
   // Send low balance alert (only notification type we need)
   async sendLowBalanceAlert(): Promise<string | null> {
@@ -277,7 +398,7 @@ export const notificationService = {
       'Your balance is below 10% of your total income. Consider reviewing your spending.',
       { type: 'low_balance_alert', icon: 'alert-circle-outline' }
     );
-  },
+  }
 
   // Send weekly summary reminder
   async sendWeeklySummaryReminder(): Promise<string | null> {
@@ -292,10 +413,12 @@ export const notificationService = {
       } as Notifications.CalendarTriggerInput,
       { type: 'weekly_summary', icon: 'bar-chart-outline' }
     );
-  },
+  }
 
   // Save notification to Firestore without sending local notification
   async saveNotificationOnly(title: string, body: string, data?: any): Promise<void> {
     await this.saveNotificationToFirestore(title, body, data);
-  },
-}; 
+  }
+}
+
+export const notificationService = new NotificationServiceImpl(); 

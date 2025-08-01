@@ -4,9 +4,11 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, 
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { categoriesService, Category } from '../services/categoriesService';
 import { transactionsService, Transaction, TransactionStats } from '../services/transactionsService';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { formatDateShort } from '../utils/dateUtils';
 import { getDoc, doc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
@@ -22,6 +24,8 @@ declare global {
 
 export default function Home() {
   const { user } = useAuth();
+  const { theme } = useTheme();
+  
   const [firebaseStatus, setFirebaseStatus] = useState<string>('Checking...');
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -36,12 +40,273 @@ export default function Home() {
   const [categorySpending, setCategorySpending] = useState<{ [key: string]: number }>({});
   const [userProfile, setUserProfile] = useState<{ fullName?: string; firstName?: string; lastName?: string }>({});
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    scrollContent: {
+      backgroundColor: theme.surface,
+      padding: 20,
+      paddingBottom: 100, // Increased padding to account for tab bar
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 24,
+    },
+    avatar: {
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      marginRight: 12,
+    },
+    greeting: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      marginBottom: 2,
+    },
+    name: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: theme.text,
+    },
+    bellCircle: {
+      width: 52,
+      height: 52,
+      borderRadius: 16,
+      backgroundColor: theme.card,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#000',
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 2,
+      borderWidth: 1,
+      borderColor: theme.border,
+
+    },
+    balanceCard: {
+      backgroundColor: theme.card,
+      borderRadius: 16,
+      padding: 20,
+      marginBottom: 28,
+      shadowColor: '#000',
+      shadowOpacity: 0.04,
+      shadowRadius: 4,
+      shadowOffset: { width: 0, height: 1 },
+      elevation: 1,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    balanceLabel: {
+      fontSize: 32,
+      fontWeight: 'bold',
+      color: theme.text,
+      marginBottom: 4,
+    },
+    balanceSub: {
+      color: theme.textSecondary,
+      fontSize: 15,
+      marginBottom: 18,
+    },
+    progressBarBg: {
+      height: 6,
+      backgroundColor: theme.border,
+      borderRadius: 3,
+      marginBottom: 18,
+      overflow: 'hidden',
+    },
+    progressBarFill: {
+      height: 6,
+      backgroundColor: theme.primary,
+      borderRadius: 3,
+    },
+    balanceRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 8,
+    },
+    balanceCol: {
+      alignItems: 'center',
+    },
+    balanceMiniLabel: {
+      color: theme.textSecondary,
+      fontSize: 13,
+      marginBottom: 2,
+    },
+    balanceMiniValue: {
+      color: theme.text,
+      fontWeight: 'bold',
+      fontSize: 15,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: theme.textSecondary,
+      marginBottom: 12,
+      marginTop: 8,
+    },
+    categoryGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+      marginBottom: 28,
+    },
+    categoryCard: {
+      width: '47%',
+      borderRadius: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 14,
+      marginBottom: 14,
+      backgroundColor: theme.card,
+      borderColor: theme.border,
+      borderWidth: 1,
+    },
+    categoryIcon: {
+      marginRight: 12,
+      backgroundColor: theme.surface,
+      borderRadius: 8,
+      padding: 6,
+    },
+    categoryLabel: {
+      fontSize: 14,
+      color: theme.text,
+      fontWeight: 'bold',
+      flexShrink: 1,
+      flexWrap: 'wrap',
+    },
+    categoryAmount: {
+      fontSize: 13,
+      color: theme.textSecondary,
+      marginTop: 2,
+    },
+    transactionsCard: {
+      backgroundColor: theme.card,
+      borderColor: theme.border,
+      borderWidth: 1,
+      borderRadius: 16,
+      padding: 12,
+      shadowColor: '#000',
+      shadowOpacity: 0.04,
+      shadowRadius: 4,
+      shadowOffset: { width: 0, height: 1 },
+      elevation: 1,
+    },
+    transactionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 20,
+    },
+    transactionIcon: {
+      marginRight: 12,
+      backgroundColor: theme.surface,
+      borderRadius: 8,
+      padding: 6,
+    },
+    transactionLabel: {
+      fontSize: 15,
+      color: theme.text,
+      fontWeight: 'bold',
+    },
+    transactionSubtitle: {
+      fontSize: 12,
+      color: theme.textSecondary,
+    },
+    transactionAmount: {
+      fontSize: 15,
+      color: theme.text,
+      fontWeight: 'bold',
+      marginLeft: 8,
+    },
+    transactionDivider: {
+      height: 1,
+      backgroundColor: theme.borderLight,
+      marginLeft: 44,
+      marginRight: 0,
+      marginBottom: 2,
+    },
+    emptyStateContainer: {
+      alignItems: 'center',
+      paddingVertical: 30,
+      paddingHorizontal: 20,
+      backgroundColor: theme.card,
+      borderRadius: 16,
+      borderColor: theme.border,
+      borderWidth: 1,
+      marginBottom: 28,
+    },
+    emptyStateIcon: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: theme.surface,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 16,
+      borderWidth: 2,
+      borderColor: theme.primary,
+      borderStyle: 'dashed',
+    },
+    emptyStateTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: theme.text,
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    emptyStateMessage: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      textAlign: 'center',
+      lineHeight: 20,
+      marginBottom: 20,
+      paddingHorizontal: 10,
+    },
+    emptyStateButton: {
+      backgroundColor: theme.primary,
+      borderRadius: 12,
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 5,
+    },
+    emptyStateButtonText: {
+      color: theme.textInverse,
+      fontSize: 14,
+      fontWeight: '600',
+      textAlign: 'center',
+    },
+  });
+
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good Morning';
     if (hour < 17) return 'Good Afternoon';
     if (hour < 21) return 'Good Evening';
     return 'Good Night';
+  };
+
+  // Calculate progress bar percentage based on spending vs income
+  const getProgressPercentage = () => {
+    if (stats.totalIncome === 0) return 0;
+    const percentage = (stats.totalExpense / stats.totalIncome) * 100;
+    // Cap at 100% to prevent overflow
+    return Math.min(percentage, 100);
+  };
+
+  // Get progress bar color based on spending percentage
+  const getProgressBarColor = () => {
+    const percentage = getProgressPercentage();
+    if (percentage < 50) return theme.success; // Green for good spending
+    if (percentage < 80) return theme.warning; // Orange for moderate spending
+    return theme.error; // Red for high spending
   };
 
   const fetchData = async () => {
@@ -191,10 +456,10 @@ export default function Home() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['top','left','right']}>
-        <StatusBar style="dark" />
+        <StatusBar style={theme.statusBarStyle} />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#4caf50" />
-          <Text style={{ marginTop: 16, color: '#666' }}>Loading your data...</Text>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={{ marginTop: 16, color: theme.textSecondary }}>Loading your data...</Text>
         </View>
       </SafeAreaView>
     );
@@ -202,12 +467,12 @@ export default function Home() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top','left','right']}>
-      <StatusBar style="dark" />
+      <StatusBar style={theme.statusBarStyle} />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4caf50']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} />
         }
       >
         {/* Header */}
@@ -223,40 +488,54 @@ export default function Home() {
           </View>
           <View style={styles.bellCircle}>
             <TouchableOpacity onPress={() => router.push('/components/notifications')}>
-              <Ionicons name="notifications-outline" size={25} color="#B0B0B0" />
+              <Ionicons name="notifications-outline" size={25} color={theme.textSecondary} />
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Balance Card */}
-        <View style={styles.balanceCard}>
-          <Text style={styles.balanceLabel}>₹ {stats.balance.toLocaleString()}</Text>
-          <Text style={styles.balanceSub}>Balance</Text>
+        <LinearGradient
+          colors={['#002219', '#008361', '#002219']}
+          style={styles.balanceCard}
+        >
+          <Text style={[styles.balanceLabel, { color: theme.background === '#121212' ? theme.text : '#FFFFFF' }]}>₹ {stats.balance.toLocaleString()}</Text>
+          <Text style={[styles.balanceSub, { color: theme.background === '#121212' ? theme.textSecondary : '#FFFFFF', opacity: 0.9 }]}>Balance</Text>
+          <Text style={[styles.balanceSub, { fontSize: 12, marginBottom: 8, color: theme.background === '#121212' ? theme.textSecondary : '#FFFFFF', opacity: 0.8 }]}>
+            Spending Progress: {getProgressPercentage().toFixed(1)}% of income
+          </Text>
           <View style={styles.progressBarBg}>
-            <View style={styles.progressBarFill} />
+            <View 
+              style={[
+                styles.progressBarFill, 
+                { 
+                  width: `${getProgressPercentage()}%`,
+                  backgroundColor: getProgressBarColor()
+                }
+              ]} 
+            />
           </View>
           <View style={styles.balanceRow}>
             <View style={styles.balanceCol}>
-              <Text style={styles.balanceMiniLabel}>Income</Text>
-              <Text style={styles.balanceMiniValue}>₹ {stats.totalIncome.toLocaleString()}</Text>
+              <Text style={[styles.balanceMiniLabel, { color: theme.background === '#121212' ? theme.textSecondary : '#FFFFFF', opacity: 0.8 }]}>Income</Text>
+              <Text style={[styles.balanceMiniValue, { color: theme.background === '#121212' ? theme.text : '#FFFFFF' }]}>₹ {stats.totalIncome.toLocaleString()}</Text>
             </View>
             <View style={styles.balanceCol}>
-              <Text style={styles.balanceMiniLabel}>Expenditure</Text>
-              <Text style={styles.balanceMiniValue}>₹ {stats.totalExpense.toLocaleString()}</Text>
+              <Text style={[styles.balanceMiniLabel, { color: theme.background === '#121212' ? theme.textSecondary : '#FFFFFF', opacity: 0.8 }]}>Expenditure</Text>
+              <Text style={[styles.balanceMiniValue, { color: theme.background === '#121212' ? theme.text : '#FFFFFF' }]}>₹ {stats.totalExpense.toLocaleString()}</Text>
             </View>
             <View style={styles.balanceCol}>
-              <Text style={styles.balanceMiniLabel}>Transactions</Text>
-              <Text style={styles.balanceMiniValue}>{stats.transactionCount}</Text>
+              <Text style={[styles.balanceMiniLabel, { color: theme.background === '#121212' ? theme.textSecondary : '#FFFFFF', opacity: 0.8 }]}>Transactions</Text>
+              <Text style={[styles.balanceMiniValue, { color: theme.background === '#121212' ? theme.text : '#FFFFFF' }]}>{stats.transactionCount}</Text>
             </View>
           </View>
-        </View>
+        </LinearGradient>
 
         {/* Spending by Category */}
         <Text style={styles.sectionTitle}>Spending by Category</Text>
         {categories.length > 0 ? (
           <View style={styles.categoryGrid}>
             {categories.map((cat, idx) => (
-              <View key={cat.id} style={[styles.categoryCard, { backgroundColor: "white", borderColor: '#D9D9D9', borderWidth: 0.2 }]}> 
+              <View key={cat.id} style={styles.categoryCard}> 
                 <View style={[styles.categoryIcon, { backgroundColor: cat.color + '20' }]}>
                   {getIconComponent(cat.icon, cat.color)}
                 </View>
@@ -270,7 +549,7 @@ export default function Home() {
         ) : (
           <View style={styles.emptyStateContainer}>
             <View style={styles.emptyStateIcon}>
-              <FontAwesome5 name="chart-pie" size={40} color="#4caf50" />
+              <FontAwesome5 name="chart-pie" size={40} color={theme.primary} />
             </View>
             <Text style={styles.emptyStateTitle}>No Spending Data</Text>
             <Text style={styles.emptyStateMessage}>
@@ -297,9 +576,9 @@ export default function Home() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.transactionLabel}>{tx.description}</Text>
-                                            <Text style={styles.transactionSubtitle}>{tx.categoryName} · {formatDateShort(tx.date)}</Text>
+                    <Text style={styles.transactionSubtitle}>{tx.categoryName} · {formatDateShort(tx.date)}</Text>
                   </View>
-                  <Text style={[styles.transactionAmount, { color: tx.type === 'income' ? '#4CAF50' : '#FF5252' }]}>
+                  <Text style={[styles.transactionAmount, { color: tx.type === 'income' ? theme.success : theme.error }]}>
                     {tx.type === 'income' ? '+' : '-'}₹ {tx.amount.toLocaleString()}
                   </Text>
                 </View>
@@ -311,7 +590,7 @@ export default function Home() {
           ) : (
             <View style={styles.emptyStateContainer}>
               <View style={styles.emptyStateIcon}>
-                <FontAwesome5 name="receipt" size={40} color="#4caf50" />
+                <FontAwesome5 name="receipt" size={40} color={theme.primary} />
               </View>
               <Text style={styles.emptyStateTitle}>No Transactions Yet</Text>
               <Text style={styles.emptyStateMessage}>
@@ -329,246 +608,4 @@ export default function Home() {
       </ScrollView>
     </SafeAreaView>
   );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  
-  },
-  scrollContent: {
-    backgroundColor: '#F8F9FB',
-    padding: 20,
-    paddingBottom: 100, // Increased padding to account for tab bar
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-    marginTop: 0,
-    
-  },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 20,
-    backgroundColor: '#E0E0E0',
-    marginRight: 12,
-  },
-  greeting: {
-    color: '#B0B0B0',
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  name: {
-    color: '#222',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  bellCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: 'white',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  balanceCard: {
-    backgroundColor: '#23242A',
-    borderRadius: 24,
-    padding: 24,
-    marginBottom: 28,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  balanceLabel: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 2,
-  },
-  balanceSub: {
-    color: '#B0B0B0',
-    fontSize: 15,
-    marginBottom: 18,
-  },
-  progressBarBg: {
-    height: 6,
-    backgroundColor: '#44454B',
-    borderRadius: 3,
-    marginBottom: 18,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    width: '50%',
-    height: 6,
-    backgroundColor: '#FF9900',
-    borderRadius: 3,
-  },
-  balanceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 8,
-  },
-  balanceCol: {
-    alignItems: 'center',
-  },
-  balanceMiniLabel: {
-    color: '#B0B0B0',
-    fontSize: 13,
-    marginBottom: 2,
-  },
-  balanceMiniValue: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 15,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#888',
-    marginBottom: 12,
-    marginTop: 8,
-  },
-  categoryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: 28,
-  },
-  categoryCard: {
-    width: '47%',
-    borderRadius: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    marginBottom: 14,
-  },
-  categoryIcon: {
-    marginRight: 12,
-   backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 6,
-  },
-  categoryLabel: {
-    fontSize: 14,
-    color: '#222',
-    fontWeight: 'bold',
-    flexShrink: 1,
-    flexWrap: 'wrap',
-  },
-  categoryAmount: {
-    fontSize: 13,
-    color: '#888',
-    marginTop: 2,
-  },
-  transactionsCard: {
-    backgroundColor: 'white',
-    borderColor:'#D9D9D9',
-    borderWidth:1,
-    borderRadius: 16,
-    padding: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
-  },
-  transactionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical:20,
-  },
-  transactionIcon: {
-    marginRight: 12,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 6,
-  },
-  transactionLabel: {
-    fontSize: 15,
-    color: '#222',
-    fontWeight: 'bold',
-  },
-  transactionSubtitle: {
-    fontSize: 12,
-    color: '#888',
-  },
-  transactionAmount: {
-    fontSize: 15,
-    color: '#222',
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  transactionDivider: {
-    height: 1,
-    backgroundColor: '#F0F0F0',
-    marginLeft: 44,
-    marginRight: 0,
-    marginBottom: 2,
-  },
-  // Empty state styles
-  emptyStateContainer: {
-    alignItems: 'center',
-    paddingVertical: 30,
-    paddingHorizontal: 20,
-    backgroundColor: 'white',
-    borderRadius: 16,
-    borderColor: '#D9D9D9',
-    borderWidth: 1,
-    marginBottom: 28,
-  },
-  emptyStateIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#f0f9ff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    borderWidth: 2,
-    borderColor: '#4caf50',
-    borderStyle: 'dashed',
-  },
-  emptyStateTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#101828',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptyStateMessage: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 20,
-    paddingHorizontal: 10,
-  },
-  emptyStateButton: {
-    backgroundColor: '#4caf50',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    shadowColor: '#4caf50',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  emptyStateButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-}); 
+} 

@@ -16,6 +16,8 @@ import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { StatusBar } from 'expo-status-bar';
 
 interface PersonalInfo {
   fullName: string;
@@ -30,6 +32,7 @@ interface PersonalInfo {
 
 export default function PersonalInformation() {
   const { user } = useAuth();
+  const { theme } = useTheme();
   
   console.log('PersonalInformation component - user:', user?.email, 'uid:', user?.uid);
   console.log('PersonalInformation component - user object:', user);
@@ -242,7 +245,8 @@ export default function PersonalInformation() {
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1 }} edges={['top','left','right','bottom']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }} edges={['top','left','right','bottom']}>
+        <StatusBar style={theme.statusBarStyle} />
         <KeyboardAwareScrollView
           contentContainerStyle={{
             flex: 1,
@@ -255,8 +259,8 @@ export default function PersonalInformation() {
           keyboardShouldPersistTaps="handled"
           enableAutomaticScroll={true}
         >
-          <ActivityIndicator size="large" color="#4caf50" />
-          <Text style={{ marginTop: 16, color: '#666' }}>Loading your information...</Text>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={{ marginTop: 16, color: theme.textSecondary }}>Loading your information...</Text>
         </KeyboardAwareScrollView>
       </SafeAreaView>
     );
@@ -265,7 +269,8 @@ export default function PersonalInformation() {
   // Show empty state if no profile data
   if (!hasProfileData) {
     return (
-      <SafeAreaView style={{ flex: 1 }} edges={['top','left','right','bottom']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }} edges={['top','left','right','bottom']}>
+        <StatusBar style={theme.statusBarStyle} />
         <KeyboardAwareScrollView
           contentContainerStyle={{
             paddingTop: 24,
@@ -278,25 +283,25 @@ export default function PersonalInformation() {
           enableAutomaticScroll={true}
         >
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Personal Information</Text>
-            <Text style={styles.headerSubtitle}>Complete your profile to get started</Text>
+            <Text style={[styles.headerTitle, { color: theme.text }]}>Personal Information</Text>
+            <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Complete your profile to get started</Text>
           </View>
 
           {/* Empty State */}
-          <View style={styles.emptyStateContainer}>
-            <View style={styles.emptyStateAvatar}>
-              <FontAwesome5 name="user-circle" size={80} color="#4caf50" />
+          <View style={[styles.emptyStateContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <View style={[styles.emptyStateAvatar, { backgroundColor: theme.surface }]}>
+              <FontAwesome5 name="user-circle" size={80} color={theme.primary} />
             </View>
-            <Text style={styles.emptyStateTitle}>Complete Your Profile</Text>
-            <Text style={styles.emptyStateMessage}>
+            <Text style={[styles.emptyStateTitle, { color: theme.text }]}>Complete Your Profile</Text>
+            <Text style={[styles.emptyStateMessage, { color: theme.textSecondary }]}>
               Add your personal information to personalize your CashCraft experience. 
               Your profile helps us provide better insights and recommendations.
             </Text>
             <TouchableOpacity 
-              style={styles.emptyStateButton} 
+              style={[styles.emptyStateButton, { backgroundColor: theme.primary }]} 
               onPress={() => setIsEditing(true)}
             >
-              <Text style={styles.emptyStateButtonText}>Start Adding Information</Text>
+              <Text style={[styles.emptyStateButtonText, { color: theme.textInverse }]}>Start Adding Information</Text>
             </TouchableOpacity>
           </View>
 
@@ -404,7 +409,8 @@ export default function PersonalInformation() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={['top','left','right','bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }} edges={['top','left','right','bottom']}>
+      <StatusBar style={theme.statusBarStyle} />
       <KeyboardAwareScrollView
         contentContainerStyle={{
           paddingTop: 24,
@@ -417,171 +423,171 @@ export default function PersonalInformation() {
         enableAutomaticScroll={true}
       >
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Personal Information</Text>
-          <Text style={styles.headerSubtitle}>Manage your profile details</Text>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>Personal Information</Text>
+          <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Manage your profile details</Text>
         </View>
 
         {/* Profile Header */}
-        <View style={styles.profileHeader}>
+        <View style={[styles.profileHeader, { backgroundColor: theme.card, borderColor: theme.border }]}>
           <TouchableOpacity style={styles.avatarContainer} onPress={pickImage}>
             {profileImage ? (
               <Image source={{ uri: profileImage }} style={styles.avatar} />
             ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Text style={styles.avatarText}>{getInitials(personalInfo.fullName)}</Text>
+              <View style={[styles.avatarPlaceholder, { backgroundColor: theme.primary }]}>
+                <Text style={[styles.avatarText, { color: theme.textInverse }]}>{getInitials(personalInfo.fullName)}</Text>
               </View>
             )}
-            <View style={styles.editAvatarButton}>
-              <Ionicons name="camera" size={16} color="#fff" />
+            <View style={[styles.editAvatarButton, { backgroundColor: theme.primary }]}>
+              <Ionicons name="camera" size={16} color={theme.textInverse} />
             </View>
           </TouchableOpacity>
           
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{personalInfo.fullName || 'Add your name'}</Text>
-            <Text style={styles.profileEmail}>{personalInfo.email || 'Add your email'}</Text>
+            <Text style={[styles.profileName, { color: theme.text }]}>{personalInfo.fullName || 'Add your name'}</Text>
+            <Text style={[styles.profileEmail, { color: theme.textSecondary }]}>{personalInfo.email || 'Add your email'}</Text>
           </View>
           
           <TouchableOpacity 
-            style={styles.editButton} 
+            style={[styles.editButton, { backgroundColor: theme.primary }]} 
             onPress={() => setIsEditing(!isEditing)}
           >
-            <Ionicons name={isEditing ? "checkmark" : "pencil"} size={20} color="#fff" />
+            <Ionicons name={isEditing ? "checkmark" : "pencil"} size={20} color={theme.textInverse} />
           </TouchableOpacity>
         </View>
 
         {/* Basic Information Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Basic Information</Text>
+        <View style={[styles.section, { backgroundColor: theme.card, borderColor: theme.border }]}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Basic Information</Text>
           
           {/* Full Name */}
           <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Full Name</Text>
-            <View style={styles.inputWrapper}>
+            <Text style={[styles.inputLabel, { color: theme.text }]}>Full Name</Text>
+            <View style={[styles.inputWrapper, { borderColor: theme.border, backgroundColor: theme.surface }]}>
               <TextInput
-                style={[styles.textInput, !isEditing && styles.disabledInput]}
+                style={[styles.textInput, !isEditing && styles.disabledInput, { color: theme.text, backgroundColor: theme.surface }]}
                 value={personalInfo.fullName}
                 onChangeText={(text) => updateField('fullName', text)}
                 editable={isEditing}
                 placeholder="Enter your full name"
-                placeholderTextColor="#888"
+                placeholderTextColor={theme.textTertiary}
               />
             </View>
           </View>
 
           {/* Email Address */}
           <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Email Address</Text>
-            <View style={styles.inputWrapper}>
-              <Ionicons name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
+            <Text style={[styles.inputLabel, { color: theme.text }]}>Email Address</Text>
+            <View style={[styles.inputWrapper, { borderColor: theme.border, backgroundColor: theme.surface }]}>
+              <Ionicons name="mail-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
               <TextInput
-                style={[styles.textInput, styles.inputWithIcon, !isEditing && styles.disabledInput]}
+                style={[styles.textInput, styles.inputWithIcon, !isEditing && styles.disabledInput, { color: theme.text, backgroundColor: theme.surface }]}
                 value={personalInfo.email}
                 onChangeText={(text) => updateField('email', text)}
                 editable={isEditing}
                 placeholder="Enter your email"
                 keyboardType="email-address"
-                placeholderTextColor="#888"
+                placeholderTextColor={theme.textTertiary}
               />
             </View>
           </View>
 
           {/* Phone Number */}
           <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Phone Number</Text>
-            <View style={styles.inputWrapper}>
-              <Ionicons name="call-outline" size={20} color="#666" style={styles.inputIcon} />
+            <Text style={[styles.inputLabel, { color: theme.text }]}>Phone Number</Text>
+            <View style={[styles.inputWrapper, { borderColor: theme.border, backgroundColor: theme.surface }]}>
+              <Ionicons name="call-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
               <TextInput
-                style={[styles.textInput, styles.inputWithIcon, !isEditing && styles.disabledInput]}
+                style={[styles.textInput, styles.inputWithIcon, !isEditing && styles.disabledInput, { color: theme.text, backgroundColor: theme.surface }]}
                 value={personalInfo.phone}
                 onChangeText={(text) => updateField('phone', text)}
                 editable={isEditing}
                 placeholder="Enter your phone number"
                 keyboardType="phone-pad"
-                placeholderTextColor="#888"
+                placeholderTextColor={theme.textTertiary}
               />
             </View>
           </View>
 
           {/* Gender */}
           <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Gender</Text>
-            <View style={styles.inputWrapper}>
+            <Text style={[styles.inputLabel, { color: theme.text }]}>Gender</Text>
+            <View style={[styles.inputWrapper, { borderColor: theme.border, backgroundColor: theme.surface }]}>
               <TextInput
-                style={[styles.textInput, !isEditing && styles.disabledInput]}
+                style={[styles.textInput, !isEditing && styles.disabledInput, { color: theme.text, backgroundColor: theme.surface }]}
                 value={personalInfo.gender}
                 onChangeText={(text) => updateField('gender', text)}
                 editable={isEditing}
                 placeholder="Enter your gender"
-                placeholderTextColor="#888"
+                placeholderTextColor={theme.textTertiary}
               />
             </View>
           </View>
 
           {/* Profession */}
           <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Profession</Text>
-            <View style={styles.inputWrapper}>
+            <Text style={[styles.inputLabel, { color: theme.text }]}>Profession</Text>
+            <View style={[styles.inputWrapper, { borderColor: theme.border, backgroundColor: theme.surface }]}>
               <TextInput
-                style={[styles.textInput, !isEditing && styles.disabledInput]}
+                style={[styles.textInput, !isEditing && styles.disabledInput, { color: theme.text, backgroundColor: theme.surface }]}
                 value={personalInfo.profession}
                 onChangeText={(text) => updateField('profession', text)}
                 editable={isEditing}
                 placeholder="Enter your profession"
-                placeholderTextColor="#888"
+                placeholderTextColor={theme.textTertiary}
               />
             </View>
           </View>
 
           {/* Username */}
           <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Username</Text>
-            <View style={styles.inputWrapper}>
+            <Text style={[styles.inputLabel, { color: theme.text }]}>Username</Text>
+            <View style={[styles.inputWrapper, { borderColor: theme.border, backgroundColor: theme.surface }]}>
               <TextInput
-                style={[styles.textInput, !isEditing && styles.disabledInput]}
+                style={[styles.textInput, !isEditing && styles.disabledInput, { color: theme.text, backgroundColor: theme.surface }]}
                 value={personalInfo.username}
                 onChangeText={(text) => updateField('username', text)}
                 editable={isEditing}
                 placeholder="Enter your username"
-                placeholderTextColor="#888"
+                placeholderTextColor={theme.textTertiary}
               />
             </View>
           </View>
         </View>
 
         {/* Additional Information Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Additional Information</Text>
+        <View style={[styles.section, { backgroundColor: theme.card, borderColor: theme.border }]}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Additional Information</Text>
           
           {/* Address */}
           <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Address</Text>
-            <View style={styles.inputWrapper}>
-              <Ionicons name="location-outline" size={20} color="#666" style={styles.inputIcon} />
+            <Text style={[styles.inputLabel, { color: theme.text }]}>Address</Text>
+            <View style={[styles.inputWrapper, { borderColor: theme.border, backgroundColor: theme.surface }]}>
+              <Ionicons name="location-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
               <TextInput
-                style={[styles.textInput, styles.inputWithIcon, !isEditing && styles.disabledInput]}
+                style={[styles.textInput, styles.inputWithIcon, !isEditing && styles.disabledInput, { color: theme.text, backgroundColor: theme.surface }]}
                 value={personalInfo.address}
                 onChangeText={(text) => updateField('address', text)}
                 editable={isEditing}
                 placeholder="Enter your address"
                 multiline
                 numberOfLines={2}
-                placeholderTextColor="#888"
+                placeholderTextColor={theme.textTertiary}
               />
             </View>
           </View>
 
           {/* Date of Birth */}
           <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Date of Birth</Text>
-            <View style={styles.inputWrapper}>
-              <Ionicons name="calendar-outline" size={20} color="#666" style={styles.inputIcon} />
+            <Text style={[styles.inputLabel, { color: theme.text }]}>Date of Birth</Text>
+            <View style={[styles.inputWrapper, { borderColor: theme.border, backgroundColor: theme.surface }]}>
+              <Ionicons name="calendar-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
               <TextInput
-                style={[styles.textInput, styles.inputWithIcon, !isEditing && styles.disabledInput]}
+                style={[styles.textInput, styles.inputWithIcon, !isEditing && styles.disabledInput, { color: theme.text, backgroundColor: theme.surface }]}
                 value={personalInfo.dateOfBirth}
                 onChangeText={(text) => updateField('dateOfBirth', text)}
                 editable={isEditing}
                 placeholder="DD/MM/YYYY"
-                placeholderTextColor="#888"
+                placeholderTextColor={theme.textTertiary}
               />
             </View>
           </View>
@@ -591,21 +597,21 @@ export default function PersonalInformation() {
         {isEditing && (
           <View style={styles.actionButtons}>
             <TouchableOpacity 
-              style={styles.cancelButton} 
+              style={[styles.cancelButton, { backgroundColor: theme.surface, borderColor: theme.border }]} 
               onPress={handleCancel}
             >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <Text style={[styles.cancelButtonText, { color: theme.text }]}>Cancel</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={styles.saveButton} 
+              style={[styles.saveButton, { backgroundColor: theme.primary }]} 
               onPress={handleSave}
               disabled={saving}
             >
               {saving ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={theme.textInverse} />
               ) : (
-                <Text style={styles.saveButtonText}>Save Changes</Text>
+                <Text style={[styles.saveButtonText, { color: theme.textInverse }]}>Save Changes</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -871,8 +877,10 @@ const styles = StyleSheet.create({
   profileHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
-    paddingHorizontal: 10,
+   margin:20,
+   padding:10,
+   borderRadius:12,
+    paddingHorizontal: 20,
   },
   avatarContainer: {
     position: 'relative',

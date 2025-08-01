@@ -5,6 +5,8 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { db } from '../firebaseConfig';
 import { collection, query, where, orderBy, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { StatusBar } from 'expo-status-bar';
 import NoNotificationsIcon from './NoNotificationsIcon';
 
 interface Notification {
@@ -18,6 +20,7 @@ interface Notification {
 
 const NotificationScreen = () => {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -68,24 +71,69 @@ const NotificationScreen = () => {
     }
   };
 
+  const styles = StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: theme.background },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingTop: 8,
+      paddingBottom: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    header: { fontSize: 22, fontWeight: '600', color: theme.text },
+    clearBtn: { flexDirection: 'row', alignItems: 'center' },
+    clearText: { color: theme.textSecondary, marginLeft: 4, fontSize: 14 },
+    listContent: { padding: 16 },
+    notification: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.card,
+      borderRadius: 10,
+      padding: 14,
+      marginBottom: 12,
+      shadowColor: '#000',
+      shadowOpacity: 0.03,
+      shadowRadius: 2,
+      shadowOffset: { width: 0, height: 1 },
+      elevation: 1,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    notificationIcon: { marginRight: 14 },
+    title: { fontWeight: '500', fontSize: 16, color: theme.text },
+    body: { fontSize: 13, color: theme.textSecondary, marginTop: 2 },
+    emptyContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 32,
+    },
+    emptyTitle: { fontSize: 18, fontWeight: '600', color: theme.textSecondary, marginBottom: 4 },
+    emptyMsg: { fontSize: 14, color: theme.textTertiary },
+  });
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <StatusBar style={theme.statusBarStyle} />
       <View style={styles.headerRow}>
         <Text style={styles.header}>Notifications</Text>
         {notifications.length > 0 && (
           <TouchableOpacity onPress={handleClearAll} style={styles.clearBtn}>
-            <MaterialIcons name="clear-all" size={22} color="#888" />
+            <MaterialIcons name="clear-all" size={22} color={theme.textSecondary} />
             <Text style={styles.clearText}>Clear All</Text>
           </TouchableOpacity>
         )}
       </View>
       {loading ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ color: '#888' }}>Loading...</Text>
+          <Text style={{ color: theme.textSecondary }}>Loading...</Text>
         </View>
       ) : notifications.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <NoNotificationsIcon size={80} color="#B0B0B0" />
+          <NoNotificationsIcon size={80} color={theme.textTertiary} />
           <Text style={styles.emptyTitle}>No Notifications</Text>
           <Text style={styles.emptyMsg}>You're all caught up!</Text>
         </View>
@@ -95,14 +143,14 @@ const NotificationScreen = () => {
           keyExtractor={item => item.id}
           contentContainerStyle={styles.listContent}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4caf50']} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} />
           }
           renderItem={({ item }) => (
             <View style={styles.notification}>
               <Ionicons 
                 name={item.icon || 'notifications-outline'} 
                 size={28} 
-                color="#4caf50" 
+                color={theme.primary} 
                 style={styles.notificationIcon} 
               />
               <View style={{ flex: 1 }}>
@@ -117,46 +165,6 @@ const NotificationScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#fff' },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  header: { fontSize: 22, fontWeight: '600', color: '#222' },
-  clearBtn: { flexDirection: 'row', alignItems: 'center' },
-  clearText: { color: '#888', marginLeft: 4, fontSize: 14 },
-  listContent: { padding: 16 },
-  notification: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F7F7F7',
-    borderRadius: 10,
-    padding: 14,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.03,
-    shadowRadius: 2,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
-  },
-  notificationIcon: { marginRight: 14 },
-  title: { fontWeight: '500', fontSize: 16, color: '#222' },
-  body: { fontSize: 13, color: '#555', marginTop: 2 },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-  },
-  emptyTitle: { fontSize: 18, fontWeight: '600', color: '#888', marginBottom: 4 },
-  emptyMsg: { fontSize: 14, color: '#AAA' },
-});
+
 
 export default NotificationScreen; 

@@ -4,6 +4,8 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useTheme } from '../context/ThemeContext';
 import { feedbackService } from '../services/supportService';
 import { useAuth } from '../context/AuthContext';
 
@@ -47,6 +49,7 @@ const feedbackTypes: FeedbackType[] = [
 ];
 
 export default function Feedback() {
+  const { theme } = useTheme();
   const { user } = useAuth();
   const [selectedType, setSelectedType] = useState<string>('');
   const [title, setTitle] = useState('');
@@ -109,7 +112,7 @@ export default function Feedback() {
             <Ionicons
               name={star <= rating ? 'star' : 'star-outline'}
               size={32}
-              color={star <= rating ? '#ffc107' : '#ddd'}
+              color={star <= rating ? '#ffc107' : theme.textTertiary}
             />
           </TouchableOpacity>
         ))}
@@ -118,36 +121,36 @@ export default function Feedback() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={['top','left','right','bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top','left','right','bottom']}>
+      <StatusBar style={theme.statusBarStyle} />
       <KeyboardAwareScrollView
         contentContainerStyle={{
-       
           paddingBottom: 40,
-         
         }}
         enableOnAndroid={true}
         extraScrollHeight={20}
         keyboardShouldPersistTaps="handled"
         enableAutomaticScroll={true}
       >
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#333" />
+            <Ionicons name="arrow-back" size={24} color={theme.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Send Feedback</Text>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>Send Feedback</Text>
           <View style={styles.placeholder} />
         </View>
 
         {/* Feedback Type Selection */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>What type of feedback?</Text>
+        <View style={[styles.section, { backgroundColor: theme.card }]}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>What type of feedback?</Text>
           <View style={styles.feedbackTypes}>
             {feedbackTypes.map((type) => (
               <TouchableOpacity
                 key={type.id}
                 style={[
                   styles.feedbackTypeCard,
-                  selectedType === type.id && styles.selectedType
+                  { borderColor: theme.border },
+                  selectedType === type.id && { borderColor: type.color, backgroundColor: type.color + '10' }
                 ]}
                 onPress={() => setSelectedType(type.id)}
               >
@@ -155,11 +158,12 @@ export default function Feedback() {
                   <Ionicons name={type.icon as any} size={24} color={type.color} />
                 </View>
                 <View style={styles.typeContent}>
-                  <Text style={styles.typeTitle}>{type.title}</Text>
-                  <Text style={styles.typeDescription}>{type.description}</Text>
+                  <Text style={[styles.typeTitle, { color: theme.text }]}>{type.title}</Text>
+                  <Text style={[styles.typeDescription, { color: theme.textSecondary }]}>{type.description}</Text>
                 </View>
                 <View style={[
                   styles.radioButton,
+                  { borderColor: theme.border },
                   selectedType === type.id && { borderColor: type.color }
                 ]}>
                   {selectedType === type.id && (
@@ -172,59 +176,71 @@ export default function Feedback() {
         </View>
 
         {/* App Rating */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Rate your experience</Text>
+        <View style={[styles.section, { backgroundColor: theme.card }]}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Rate your experience</Text>
           <View style={styles.ratingContainer}>
             {renderStars()}
-            <Text style={styles.ratingText}>
+            <Text style={[styles.ratingText, { color: theme.textSecondary }]}>
               {rating === 0 ? 'Tap to rate' : `${rating} out of 5 stars`}
             </Text>
           </View>
         </View>
 
         {/* Feedback Form */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Tell us more</Text>
+        <View style={[styles.section, { backgroundColor: theme.card }]}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Tell us more</Text>
           
           <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Title *</Text>
+            <Text style={[styles.inputLabel, { color: theme.text }]}>Title *</Text>
             <TextInput
-              style={styles.textInput}
+              style={[styles.textInput, { 
+                borderColor: theme.border, 
+                color: theme.text, 
+                backgroundColor: theme.background 
+              }]}
               placeholder="Brief summary of your feedback"
               value={title}
               onChangeText={setTitle}
-              placeholderTextColor="#888"
+              placeholderTextColor={theme.textTertiary}
             />
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Description *</Text>
+            <Text style={[styles.inputLabel, { color: theme.text }]}>Description *</Text>
             <TextInput
-              style={[styles.textInput, styles.descriptionInput]}
+              style={[styles.textInput, styles.descriptionInput, { 
+                borderColor: theme.border, 
+                color: theme.text, 
+                backgroundColor: theme.background 
+              }]}
               placeholder="Please provide detailed feedback..."
               value={description}
               onChangeText={setDescription}
               multiline
               numberOfLines={6}
               textAlignVertical="top"
-              placeholderTextColor="#888"
+              placeholderTextColor={theme.textTertiary}
             />
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Email (Optional)</Text>
+            <Text style={[styles.inputLabel, { color: theme.text }]}>Email (Optional)</Text>
             <TextInput
-              style={styles.textInput}
+              style={[styles.textInput, { 
+                borderColor: theme.border, 
+                color: theme.text, 
+                backgroundColor: theme.background 
+              }]}
               placeholder="Your email for follow-up"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
-              placeholderTextColor="#888"
+              placeholderTextColor={theme.textTertiary}
             />
           </View>
 
-          <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} disabled={loading}>
+          <TouchableOpacity style={[styles.submitButton, { backgroundColor: theme.primary }]} onPress={handleSubmit} disabled={loading}>
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
@@ -240,7 +256,6 @@ export default function Feedback() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FB',
   },
   scrollView: {
     flex: 1,
@@ -251,9 +266,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
   },
   backButton: {
     padding: 4,
@@ -261,13 +274,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
   },
   placeholder: {
     width: 32,
   },
   section: {
-    backgroundColor: '#fff',
     marginHorizontal: 20,
     marginVertical: 8,
     borderRadius: 12,
@@ -281,7 +292,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 16,
   },
   feedbackTypes: {
@@ -293,11 +303,6 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  selectedType: {
-    borderColor: '#4caf50',
-    backgroundColor: '#f0f9ff',
   },
   typeIcon: {
     width: 48,
@@ -313,19 +318,16 @@ const styles = StyleSheet.create({
   typeTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 4,
   },
   typeDescription: {
     fontSize: 14,
-    color: '#666',
   },
   radioButton: {
     width: 20,
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#E0E0E0',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -346,7 +348,6 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontSize: 16,
-    color: '#666',
     fontWeight: '500',
   },
   inputContainer: {
@@ -355,18 +356,14 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#333',
     marginBottom: 8,
   },
   textInput: {
     borderWidth: 1,
-    borderColor: '#E0E0E0',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#333',
-    backgroundColor: '#fff',
   },
   descriptionInput: {
     height: 120,
@@ -374,7 +371,6 @@ const styles = StyleSheet.create({
   },
   inputHint: {
     fontSize: 12,
-    color: '#666',
     marginTop: 4,
   },
   submitSection: {
@@ -382,7 +378,6 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   submitButton: {
-    backgroundColor: '#4caf50',
     borderRadius: 8,
     paddingVertical: 16,
     alignItems: 'center',
@@ -396,7 +391,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   additionalInfo: {
-    backgroundColor: '#fff',
     marginHorizontal: 20,
     marginVertical: 16,
     borderRadius: 12,
@@ -410,7 +404,6 @@ const styles = StyleSheet.create({
   additionalInfoTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 12,
   },
   infoItem: {
@@ -420,7 +413,6 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 14,
-    color: '#666',
     marginLeft: 8,
   },
 }); 

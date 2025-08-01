@@ -103,6 +103,35 @@ export const authService = {
     }
   },
 
+  // Re-authenticate user
+  async reauthenticateUser(email: string, password: string): Promise<{ success: boolean; error?: AuthError }> {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        return {
+          success: false,
+          error: {
+            code: 'auth/user-not-found',
+            message: 'No user is currently signed in.'
+          }
+        };
+      }
+
+      const credential = EmailAuthProvider.credential(email, password);
+      await reauthenticateWithCredential(user, credential);
+      
+      return { success: true };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: {
+          code: error.code,
+          message: this.getErrorMessage(error.code)
+        }
+      };
+    }
+  },
+
   // Update password (requires re-authentication)
   async updatePassword(currentPassword: string, newPassword: string): Promise<{ success: boolean; error?: AuthError }> {
     try {

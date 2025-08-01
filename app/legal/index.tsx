@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useTheme } from '../context/ThemeContext';
+import { StatusBar } from 'expo-status-bar';
 
 interface LegalDocument {
   id: string;
@@ -36,25 +38,28 @@ const legalDocuments: LegalDocument[] = [
 ];
 
 export default function LegalIndex() {
+  const { theme } = useTheme();
+  
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top', 'left', 'right']}>
+      <StatusBar style={theme.statusBarStyle} />
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: theme.background }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#333" />
+            <Ionicons name="arrow-back" size={24} color={theme.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Legal</Text>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>Legal</Text>
           <View style={styles.placeholder} />
         </View>
 
         {/* Welcome Section */}
-        <View style={styles.welcomeSection}>
-          <View style={styles.welcomeIcon}>
-            <FontAwesome5 name="balance-scale" size={40} color="#4caf50" />
+        <View style={[styles.welcomeSection, { backgroundColor: theme.background, borderColor: theme.border }]}>
+          <View style={[styles.welcomeIcon, { backgroundColor: theme.surface }]}>
+            <FontAwesome5 name="balance-scale" size={40} color={theme.primary} />
           </View>
-          <Text style={styles.welcomeTitle}>Legal Information</Text>
-          <Text style={styles.welcomeSubtitle}>
+          <Text style={[styles.welcomeTitle, { color: theme.text }]}>Legal Information</Text>
+          <Text style={[styles.welcomeSubtitle, { color: theme.textSecondary }]}>
             Important legal documents and policies for using CashCraft
           </Text>
         </View>
@@ -64,38 +69,38 @@ export default function LegalIndex() {
           {legalDocuments.map((document) => (
             <TouchableOpacity
               key={document.id}
-              style={styles.documentCard}
+              style={[styles.documentCard, { backgroundColor: theme.card, borderColor: theme.border }]}
               onPress={() => router.push(document.route as any)}
             >
               <View style={[styles.documentIcon, { backgroundColor: document.iconColor + '20' }]}>
                 <Ionicons name={document.icon as any} size={24} color={document.iconColor} />
               </View>
               <View style={styles.documentContent}>
-                <Text style={styles.documentTitle}>{document.title}</Text>
-                <Text style={styles.documentSubtitle}>{document.subtitle}</Text>
-                <Text style={styles.documentDate}>Last updated: {document.lastUpdated}</Text>
+                <Text style={[styles.documentTitle, { color: theme.text }]}>{document.title}</Text>
+                <Text style={[styles.documentSubtitle, { color: theme.textSecondary }]}>{document.subtitle}</Text>
+                <Text style={[styles.documentDate, { color: theme.textTertiary }]}>Last updated: {document.lastUpdated}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#ccc" />
+              <Ionicons name="chevron-forward" size={20} color={theme.textTertiary} />
             </TouchableOpacity>
           ))}
         </View>
 
         {/* Important Notice */}
-        <View style={styles.noticeSection}>
+        <View style={[styles.noticeSection, { backgroundColor: theme.card, borderColor: theme.border }]}>
           <View style={styles.noticeHeader}>
-            <MaterialIcons name="info" size={20} color="#2196f3" />
-            <Text style={styles.noticeTitle}>Important Notice</Text>
+            <MaterialIcons name="info" size={20} color={theme.primary} />
+            <Text style={[styles.noticeTitle, { color: theme.text }]}>Important Notice</Text>
           </View>
-          <Text style={styles.noticeText}>
+          <Text style={[styles.noticeText, { color: theme.textSecondary }]}>
             These legal documents govern your use of CashCraft. By using our app, you agree to be bound 
             by these terms. Please read them carefully and contact us if you have any questions.
           </Text>
         </View>
 
         {/* Contact Legal */}
-        <View style={styles.contactSection}>
-          <Text style={styles.contactTitle}>Questions about our legal documents?</Text>
-          <Text style={styles.contactSubtitle}>
+        <View style={[styles.contactSection, { backgroundColor: theme.card, borderColor: theme.border }]}>
+          <Text style={[styles.contactTitle, { color: theme.text }]}>Questions about our legal documents?</Text>
+          <Text style={[styles.contactSubtitle, { color: theme.textSecondary }]}>
             Our legal team is here to help clarify any questions you may have.
           </Text>
           <View style={styles.contactInfo}>

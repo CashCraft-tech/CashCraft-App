@@ -3,11 +3,14 @@ import { Tabs } from "expo-router";
 import { Ionicons, MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
 import { Platform } from "react-native";
 import NotificationScreen from '../components/notifications';
+import { useTheme } from '../context/ThemeContext';
 
 export default function RootLayout() 
 {
+  const { theme } = useTheme();
+  
   return (
-    <View style={{ flex: 1, backgroundColor: 'white' }}>
+    <View style={{ flex: 1, backgroundColor: theme.background }}>
       <Tabs
         screenOptions={{
           headerShown: false,
@@ -17,7 +20,7 @@ export default function RootLayout()
             bottom: 0,
             left: 0,
             right: 0,
-            backgroundColor: "#fff",
+            backgroundColor: theme.tabBarBackground,
             height: Platform.OS === "ios" ? 80 : 90,
             shadowColor: "#000",
             shadowOffset: { width: 0, height: -2 },
@@ -25,7 +28,7 @@ export default function RootLayout()
             shadowRadius: 8,
             elevation: 8,
             borderTopWidth: 1,
-            borderTopColor: '#E0E0E0',
+            borderTopColor: theme.tabBarBorder,
             paddingBottom: Platform.OS === "ios" ? 20 : 8,
             paddingTop: 8,
           },
@@ -44,7 +47,7 @@ export default function RootLayout()
               <Ionicons
                 name="home"
                 size={28}
-                color={focused ? "#4caf50" : "#888"}
+                color={focused ? theme.primary : theme.tabBarInactive}
               />
             ),
           }}
@@ -56,7 +59,7 @@ export default function RootLayout()
               <MaterialIcons
                 name="dashboard-customize"
                 size={29}
-                color={focused ? "#4caf50" : "#888"}
+                color={focused ? theme.primary : theme.tabBarInactive}
               />
             ),
           }}
@@ -67,7 +70,7 @@ export default function RootLayout()
             tabBarIcon: ({ focused }) => (
               <View
                 style={{
-                  backgroundColor: focused ? "#4caf50" : "#888",
+                  backgroundColor: focused ? theme.primary : theme.tabBarInactive,
                   width: 30,
                   height: 30,
                   borderRadius: 4,
@@ -91,7 +94,7 @@ export default function RootLayout()
               <FontAwesome5
                 name="hand-holding-usd"
                 size={28}
-                color={focused ? "#4caf50" : "#888"}
+                color={focused ? theme.primary : theme.tabBarInactive}
               />
             ),
           }}
@@ -103,7 +106,7 @@ export default function RootLayout()
               <Ionicons
                 name="person"
                 size={28}
-                color={focused ? "#4caf50" : "#888"}
+                color={focused ? theme.primary : theme.tabBarInactive}
               />
             ),
           }}

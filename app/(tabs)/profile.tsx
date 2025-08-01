@@ -4,9 +4,12 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Im
 import { Ionicons, MaterialIcons, Feather, FontAwesome5, FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { authService } from '../services/authService';
+import { notificationService } from '../services/notificationService';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { formatDateShort } from '../utils/dateUtils';
 import { getDoc, doc } from 'firebase/firestore';
+import ThemeToggle from '../components/ThemeToggle';
 import { db } from '../firebaseConfig';
 
 export default function Profile() {
@@ -18,6 +21,7 @@ export default function Profile() {
   const router = useRouter();
 
   const { user: authUser } = useAuth();
+  const { theme } = useTheme();
   
   // Fetch user profile from Firestore
   useEffect(() => {
@@ -41,6 +45,46 @@ export default function Profile() {
 
     fetchUserProfile();
   }, [authUser]);
+
+  // Load notification preference
+  useEffect(() => {
+    const loadNotificationPreference = async () => {
+      try {
+        const isEnabled = await notificationService.isPushEnabled();
+        setPushEnabled(isEnabled);
+      } catch (error) {
+        console.error('Error loading notification preference:', error);
+      }
+    };
+
+    loadNotificationPreference();
+  }, []);
+
+  // Handle notification toggle
+  const handleNotificationToggle = async (value: boolean) => {
+    try {
+      if (value) {
+        // Enable notifications
+        const result = await notificationService.enablePushNotifications();
+        if (result.success) {
+          setPushEnabled(true);
+        } else {
+          Alert.alert('Error', result.error || 'Failed to enable notifications');
+        }
+      } else {
+        // Disable notifications
+        const result = await notificationService.disablePushNotifications();
+        if (result.success) {
+          setPushEnabled(false);
+        } else {
+          Alert.alert('Error', result.error || 'Failed to disable notifications');
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling notifications:', error);
+      Alert.alert('Error', 'Failed to update notification settings');
+    }
+  };
 
   // User data from auth context and Firestore
   const user = {
@@ -82,13 +126,126 @@ export default function Profile() {
     );
   };
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    scrollContent: {
+      backgroundColor: theme.surface,
+      padding: 20,
+      paddingBottom: 100,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: theme.text,
+      marginBottom: 10,
+      marginTop: 18,
+    },
+    card: {
+      backgroundColor: theme.card,
+      borderRadius: 16,
+      padding: 8,
+      marginBottom: 16,
+      shadowColor: '#000',
+      shadowOpacity: 0.04,
+      shadowRadius: 4,
+      shadowOffset: { width: 0, height: 1 },
+      elevation: 1,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 14,
+      paddingHorizontal: 8,
+      borderBottomWidth: 0.5,
+      borderColor: theme.borderLight,
+    },
+    iconWrap: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: theme.touchable,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 12,
+    },
+    rowLabel: {
+      fontSize: 15,
+      fontWeight: 'bold',
+      color: theme.text,
+    },
+    rowSub: {
+      fontSize: 12,
+      color: theme.textSecondary,
+    },
+  });
+
+  const profileStyles = StyleSheet.create({
+    profileCard: {
+      backgroundColor: theme.card,
+      borderRadius: 18,
+      padding: 18,
+      marginBottom: 18,
+      shadowColor: '#000',
+      shadowOpacity: 0.04,
+      shadowRadius: 4,
+      shadowOffset: { width: 0, height: 1 },
+      elevation: 1,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    avatarWrap: { marginRight: 8 },
+    avatarCircle: {
+      width: 64, height: 64, borderRadius: 32,
+      backgroundColor: theme.primary,
+      alignItems: 'center', justifyContent: 'center',
+      position: 'relative',
+    },
+    avatarInitial: { color: theme.textInverse, fontWeight: 'bold', fontSize: 32 },
+    avatarCamera: {
+      position: 'absolute', bottom: 0, right: 0,
+      backgroundColor: theme.primary, borderRadius: 12, padding: 4,
+      borderWidth: 2, borderColor: theme.textInverse,
+    },
+    name: { fontSize: 20, fontWeight: 'bold', color: theme.text, marginBottom: 2 },
+    email: { fontSize: 14, color: theme.textSecondary, marginBottom: 2 },
+    memberSince: { fontSize: 12, color: theme.textSecondary },
+    editBtn: {
+      backgroundColor: theme.touchable, borderRadius: 16, padding: 8,
+      borderWidth: 1, borderColor: theme.border,
+      alignItems: 'center', justifyContent: 'center',
+    },
+    statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
+    statBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    statValue: { fontSize: 18, fontWeight: 'bold', color: theme.text, marginBottom: 2 },
+    statLabel: { fontSize: 12, color: theme.textSecondary },
+    comingSoonBadge: {
+      position: 'absolute',
+      top: -4,
+      right: -4,
+      backgroundColor: theme.warning,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 8,
+    },
+    comingSoonText: {
+      color: theme.textInverse,
+      fontSize: 8,
+      fontWeight: 'bold',
+    },
+  });
+
   return (
     <SafeAreaView style={styles.container} edges={['top','left','right']}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Profile Title */}
         <View style={{ marginBottom: 18 }}>
-          <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#111', marginBottom: 2 }}>Profile</Text>
-          <Text style={{ fontSize: 14, color: '#888' }}>Manage your account</Text>
+          <Text style={{ fontSize: 22, fontWeight: 'bold', color: theme.text, marginBottom: 2 }}>Profile</Text>
+          <Text style={{ fontSize: 14, color: theme.textSecondary }}>Manage your account</Text>
         </View>
         {/* Profile Summary Card */}
         <View style={profileStyles.profileCard}>
@@ -111,12 +268,13 @@ export default function Profile() {
             </View>
            
           </View>
-        
+         
         </View>
+
         {/* Account Section */}
         <Text style={styles.sectionTitle}>Account</Text>
         <View style={styles.card}>
-          <TouchableOpacity style={styles.row} onPress={() => router.push('/personal-information')}>
+          <TouchableOpacity style={styles.row} onPress={() => router.push('/personal-information' as any)}>
             <View style={styles.iconWrap}><Ionicons name="person-outline" size={22} color="#B0B0B0" /></View>
             <View style={{ flex: 1 }}>
               <Text style={styles.rowLabel}>Personal Information</Text>
@@ -124,7 +282,7 @@ export default function Profile() {
             </View>
             <Ionicons name="chevron-forward" size={20} color="#B0B0B0" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.row} onPress={() => router.push('/components/manage-categories')}>
+          <TouchableOpacity style={styles.row} onPress={() => router.push('/components/manage-categories' as any)}>
             <View style={styles.iconWrap}><MaterialIcons name="category" size={22} color="#B0B0B0" /></View>
             <View style={{ flex: 1 }}>
               <Text style={styles.rowLabel}>Manage Categories</Text>
@@ -145,7 +303,7 @@ export default function Profile() {
             </View>
             <Switch
               value={pushEnabled}
-              onValueChange={setPushEnabled}
+              onValueChange={handleNotificationToggle}
               trackColor={{ false: '#E0E0E0', true: '#82B1FF' }}
               thumbColor={pushEnabled ? '#2979FF' : '#fff'}
             />
@@ -155,7 +313,7 @@ export default function Profile() {
         {/* Security Section */}
         <Text style={styles.sectionTitle}>Security</Text>
         <View style={styles.card}>
-          <TouchableOpacity style={styles.row}>
+          <TouchableOpacity style={styles.row} onPress={() => router.push('/auth/change-password' as any)}>
             <View style={styles.iconWrap}><Feather name="lock" size={22} color="#43A047" /></View>
             <View style={{ flex: 1 }}>
               <Text style={styles.rowLabel}>Change Password</Text>
@@ -163,67 +321,11 @@ export default function Profile() {
             </View>
             <Ionicons name="chevron-forward" size={20} color="#B0B0B0" />
           </TouchableOpacity>
-          <View style={styles.row}>
-            <View style={styles.iconWrap}><MaterialIcons name="security" size={22} color="#43A047" /></View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.rowLabel}>Two-Factor Authentication</Text>
-              <Text style={styles.rowSub}>Add extra security</Text>
-            </View>
-            <Switch
-              value={twoFactorEnabled}
-              onValueChange={setTwoFactorEnabled}
-              trackColor={{ false: '#E0E0E0', true: '#43A047' }}
-              thumbColor={twoFactorEnabled ? '#43A047' : '#fff'}
-            />
-          </View>
-          <View style={styles.row}>
-            <View style={styles.iconWrap}><FontAwesome5 name="fingerprint" size={22} color="#43A047" /></View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.rowLabel}>Biometric Login</Text>
-              <Text style={styles.rowSub}>Use fingerprint or face ID</Text>
-            </View>
-            <Switch
-              value={biometricEnabled}
-              onValueChange={setBiometricEnabled}
-              trackColor={{ false: '#E0E0E0', true: '#43A047' }}
-              thumbColor={biometricEnabled ? '#43A047' : '#fff'}
-            />
-          </View>
         </View>
 
         {/* Preferences Section */}
-        {/* <Text style={styles.sectionTitle}>Preferences</Text>
-        <View style={styles.card}>
-          <View style={styles.row}>
-            <View style={styles.iconWrap}><Feather name="moon" size={22} color="#9575CD" /></View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.rowLabel}>Dark Mode</Text>
-              <Text style={styles.rowSub}>Switch to dark theme</Text>
-            </View>
-            <Switch
-              value={darkMode}
-              onValueChange={setDarkMode}
-              trackColor={{ false: '#E0E0E0', true: '#9575CD' }}
-              thumbColor={darkMode ? '#9575CD' : '#fff'}
-            />
-          </View>
-          <TouchableOpacity style={styles.row}>
-            <View style={styles.iconWrap}><MaterialIcons name="language" size={22} color="#7C4DFF" /></View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.rowLabel}>Language</Text>
-              <Text style={styles.rowSub}>English (US)</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#B0B0B0" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.row}>
-            <View style={styles.iconWrap}><FontAwesome name="globe" size={22} color="#AB47BC" /></View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.rowLabel}>Currency</Text>
-              <Text style={styles.rowSub}>Indian Rupee (₹)</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#B0B0B0" />
-          </TouchableOpacity>
-        </View> */}
+        <Text style={styles.sectionTitle}>Preferences</Text>
+        <ThemeToggle />
 
         {/* Support & Legal Section */}
         <Text style={styles.sectionTitle}>Support & Legal</Text>
@@ -282,112 +384,4 @@ export default function Profile() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'white',
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 100, // Increased padding to account for tab bar
-    marginTop: 16,
-    backgroundColor: '#F8F9FB',
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#222',
-    marginBottom: 10,
-    marginTop: 18,
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 8,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-    borderBottomWidth: 0.5,
-    borderColor: '#F0F0F0',
-  },
-  iconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#F5F5F5',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  rowLabel: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#222',
-  },
-  rowSub: {
-    fontSize: 12,
-    color: '',
-  },
-}); 
-
-const profileStyles = StyleSheet.create({
-  profileCard: {
-    backgroundColor: 'white',
-    borderRadius: 18,
-    padding: 18,
-    marginBottom: 18,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
-  },
-  avatarWrap: { marginRight: 8 },
-  avatarCircle: {
-    width: 64, height: 64, borderRadius: 32,
-    backgroundColor: '#7B61FF',
-    alignItems: 'center', justifyContent: 'center',
-    position: 'relative',
-  },
-  avatarInitial: { color: '#fff', fontWeight: 'bold', fontSize: 32 },
-  avatarCamera: {
-    position: 'absolute', bottom: 0, right: 0,
-    backgroundColor: '#7B61FF', borderRadius: 12, padding: 4,
-    borderWidth: 2, borderColor: '#fff',
-  },
-  name: { fontSize: 20, fontWeight: 'bold', color: '#222', marginBottom: 2 },
-  email: { fontSize: 14, color: '#888', marginBottom: 2 },
-  memberSince: { fontSize: 12, color: '#888' },
-  editBtn: {
-    backgroundColor: '#F4F6FF', borderRadius: 16, padding: 8,
-    borderWidth: 1, borderColor: '#E0E0E0',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
-  statBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  statValue: { fontSize: 18, fontWeight: 'bold', color: '#222', marginBottom: 2 },
-  statLabel: { fontSize: 12, color: '#888' },
-  comingSoonBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: '#FF9800',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  comingSoonText: {
-    color: '#fff',
-    fontSize: 8,
-    fontWeight: 'bold',
-  },
-}); 
+ 

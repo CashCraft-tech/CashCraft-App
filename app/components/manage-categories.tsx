@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { categoriesService, Category } from '../services/categoriesService';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { notificationService } from '../services/notificationService';
 
 const ICONS = [
@@ -39,6 +40,7 @@ export default function ManageCategories() {
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const router = useRouter();
   const { user } = useAuth();
+  const { theme } = useTheme();
 
   const fetchCategories = async () => {
     if (user?.uid) {
@@ -168,62 +170,62 @@ export default function ManageCategories() {
 
   return (
     <KeyboardAwareScrollView
-      contentContainerStyle={{ flexGrow: 1, backgroundColor: '#F8F9FB' }}
+      contentContainerStyle={{ flexGrow: 1, backgroundColor: theme.background }}
       enableOnAndroid={true}
       extraScrollHeight={20}
       keyboardShouldPersistTaps="handled"
       enableAutomaticScroll={true}
     >
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#F8F9FB' }}>
-        <StatusBar style="dark" backgroundColor="#F8F9FB" />
-        <View style={styles.headerWrap}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+        <StatusBar style={theme.statusBarStyle} backgroundColor={theme.background} />
+        <View style={[styles.headerWrap, { backgroundColor: theme.background }]}>
           <TouchableOpacity style={styles.headerBack} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={22} color="#888" />
+            <Ionicons name="arrow-back" size={22} color={theme.textSecondary} />
           </TouchableOpacity>
           <View>
-            <Text style={styles.headerTitle}>Manage Categories</Text>
-            <Text style={styles.headerSubtitle}>Customize your spending categories</Text>
+            <Text style={[styles.headerTitle, { color: theme.text }]}>Manage Categories</Text>
+            <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Customize your spending categories</Text>
           </View>
         </View>
         <ScrollView 
-          contentContainerStyle={styles.scrollContent} 
+          contentContainerStyle={[styles.scrollContent, { backgroundColor: theme.background }]} 
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4caf50']} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} />
           }
         >
           {/* Create New Category Card */}
-          <View style={styles.createCard}>
-            <View style={styles.createIconWrap}>
-              <Ionicons name="add" size={36} color="#B0B0B0" />
+          <View style={[styles.createCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <View style={[styles.createIconWrap, { backgroundColor: theme.surface }]}>
+              <Ionicons name="add" size={36} color={theme.textTertiary} />
             </View>
-            <Text style={styles.createTitle}>Create New Category</Text>
-            <Text style={styles.createSub}>Add a custom category to track your spending</Text>
-            <TouchableOpacity style={styles.createBtn} onPress={() => setAddModalVisible(true)}>
-              <Ionicons name="add" size={18} color="#fff" style={{ marginRight: 8 }} />
-              <Text style={styles.createBtnText}>Add New Category</Text>
+            <Text style={[styles.createTitle, { color: theme.text }]}>Create New Category</Text>
+            <Text style={[styles.createSub, { color: theme.textSecondary }]}>Add a custom category to track your spending</Text>
+            <TouchableOpacity style={[styles.createBtn, { backgroundColor: theme.primary }]} onPress={() => setAddModalVisible(true)}>
+              <Ionicons name="add" size={18} color={theme.textInverse} style={{ marginRight: 8 }} />
+              <Text style={[styles.createBtnText, { color: theme.textInverse }]}>Add New Category</Text>
             </TouchableOpacity>
           </View>
 
           {/* Your Categories */}
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Your Categories</Text>
-            <Text style={styles.cardSub}>Manage and customize your spending categories</Text>
+          <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Your Categories</Text>
+            <Text style={[styles.cardSub, { color: theme.textSecondary }]}>Manage and customize your spending categories</Text>
             {categories.map((cat, idx) => (
               <View key={cat.id} style={styles.catRow}>
                 <View style={[styles.catIcon, { backgroundColor: cat.color }]}>{ICON_MAP[cat.icon]}</View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.catName}>{cat.name}</Text>
-                  <Text style={styles.catSub}>Custom category</Text>
+                  <Text style={[styles.catName, { color: theme.text }]}>{cat.name}</Text>
+                  <Text style={[styles.catSub, { color: theme.textSecondary }]}>Custom category</Text>
                 </View>
                 <View style={styles.catActions}>
                   <TouchableOpacity style={styles.catAction} onPress={() => handleEdit(idx)}>
-                    <Ionicons name="pencil" size={16} color="#666" />
+                    <Ionicons name="pencil" size={16} color={theme.textSecondary} />
                   </TouchableOpacity>
                   {!cat.isDefault && (
                     <TouchableOpacity style={styles.catAction} onPress={() => handleDelete(idx)}>
-                      <Ionicons name="trash" size={16} color="#FF5252" />
+                      <Ionicons name="trash" size={16} color={theme.error} />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -232,33 +234,33 @@ export default function ManageCategories() {
           </View>
 
           {/* Quick Tips */}
-          <View style={styles.tipsCard}>
-            <Text style={styles.tipsTitle}>Quick Tips</Text>
-            <View style={styles.tipRow}><Text style={styles.tipDot}>•</Text><Text style={styles.tipText}>Tap the edit icon to change category icon and color</Text></View>
-            <View style={styles.tipRow}><Text style={styles.tipDot}>•</Text><Text style={styles.tipText}>Default categories cannot be deleted</Text></View>
-            <View style={styles.tipRow}><Text style={styles.tipDot}>•</Text><Text style={styles.tipText}>Choose meaningful icons for better organization</Text></View>
+          <View style={[styles.tipsCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <Text style={[styles.tipsTitle, { color: theme.text }]}>Quick Tips</Text>
+            <View style={styles.tipRow}><Text style={[styles.tipDot, { color: theme.primary }]}>•</Text><Text style={[styles.tipText, { color: theme.textSecondary }]}>Tap the edit icon to change category icon and color</Text></View>
+            <View style={styles.tipRow}><Text style={[styles.tipDot, { color: theme.primary }]}>•</Text><Text style={[styles.tipText, { color: theme.textSecondary }]}>Default categories cannot be deleted</Text></View>
+            <View style={styles.tipRow}><Text style={[styles.tipDot, { color: theme.primary }]}>•</Text><Text style={[styles.tipText, { color: theme.textSecondary }]}>Choose meaningful icons for better organization</Text></View>
           </View>
 
           {/* Icon & Color Picker Modal */}
           <Modal visible={modalVisible} animationType="slide" transparent>
             <View style={styles.modalOverlay}>
-              <View style={styles.modalCard}>
+              <View style={[styles.modalCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
                 <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Choose Icon & Color</Text>
+                  <Text style={[styles.modalTitle, { color: theme.text }]}>Choose Icon & Color</Text>
                   <TouchableOpacity onPress={() => setModalVisible(false)}>
-                    <Ionicons name="close" size={24} color="#888" />
+                    <Ionicons name="close" size={24} color={theme.textSecondary} />
                   </TouchableOpacity>
                 </View>
                 <View style={styles.modalPreviewRow}>
                   <View style={[styles.iconPreview, { backgroundColor: selectedColor, width: 48, height: 48 }]}> {ICON_MAP[selectedIcon]} </View>
                   <View style={{ marginLeft: 12 }}>
-                    <Text style={styles.modalPreviewLabel}>Preview</Text>
-                    <Text style={styles.modalPreviewSub}>Selected icon and color</Text>
+                    <Text style={[styles.modalPreviewLabel, { color: theme.text }]}>Preview</Text>
+                    <Text style={[styles.modalPreviewSub, { color: theme.textSecondary }]}>Selected icon and color</Text>
                   </View>
                 </View>
                 <View style={styles.modalTabsRow}>
-                  <TouchableOpacity style={[styles.modalTab, pickerTab === 'Icons' && styles.modalTabActive]} onPress={() => setPickerTab('Icons')}><Text style={pickerTab === 'Icons' ? styles.modalTabTextActive : styles.modalTabText}>Icons</Text></TouchableOpacity>
-                  <TouchableOpacity style={[styles.modalTab, pickerTab === 'Colors' && styles.modalTabActive]} onPress={() => setPickerTab('Colors')}><Text style={pickerTab === 'Colors' ? styles.modalTabTextActive : styles.modalTabText}>Colors</Text></TouchableOpacity>
+                  <TouchableOpacity style={[styles.modalTab, pickerTab === 'Icons' && styles.modalTabActive, { backgroundColor: pickerTab === 'Icons' ? theme.primary : theme.surface, borderColor: theme.border }]} onPress={() => setPickerTab('Icons')}><Text style={[pickerTab === 'Icons' ? styles.modalTabTextActive : styles.modalTabText, { color: pickerTab === 'Icons' ? theme.textInverse : theme.text }]}>Icons</Text></TouchableOpacity>
+                  <TouchableOpacity style={[styles.modalTab, pickerTab === 'Colors' && styles.modalTabActive, { backgroundColor: pickerTab === 'Colors' ? theme.primary : theme.surface, borderColor: theme.border }]} onPress={() => setPickerTab('Colors')}><Text style={[pickerTab === 'Colors' ? styles.modalTabTextActive : styles.modalTabText, { color: pickerTab === 'Colors' ? theme.textInverse : theme.text }]}>Colors</Text></TouchableOpacity>
                 </View>
                 {pickerTab === 'Icons' ? (
                   <FlatList
@@ -288,8 +290,8 @@ export default function ManageCategories() {
                   />
                 )}
                 <View style={styles.modalFooterRow}>
-                  <TouchableOpacity style={styles.secondaryBtn} onPress={() => setModalVisible(false)}><Text style={styles.secondaryBtnText}>Cancel</Text></TouchableOpacity>
-                  <TouchableOpacity style={styles.primaryBtn} onPress={handleAddOrEdit}><Text style={styles.primaryBtnText}>Confirm</Text></TouchableOpacity>
+                  <TouchableOpacity style={[styles.secondaryBtn, { backgroundColor: theme.surface, borderColor: theme.border }]} onPress={() => setModalVisible(false)}><Text style={[styles.secondaryBtnText, { color: theme.text }]}>Cancel</Text></TouchableOpacity>
+                  <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: theme.primary }]} onPress={handleAddOrEdit}><Text style={[styles.primaryBtnText, { color: theme.textInverse }]}>Confirm</Text></TouchableOpacity>
                 </View>
               </View>
             </View>
