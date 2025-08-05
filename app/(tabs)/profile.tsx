@@ -11,6 +11,7 @@ import { formatDateShort } from '../utils/dateUtils';
 import { getDoc, doc } from 'firebase/firestore';
 import ThemeToggle from '../components/ThemeToggle';
 import { db } from '../firebaseConfig';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Profile() {
   const [pushEnabled, setPushEnabled] = useState(true);
@@ -124,6 +125,38 @@ export default function Profile() {
         },
       ]
     );
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to permanently delete your account? This action cannot be undone and all your data will be lost.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete Account',
+          style: 'destructive',
+          onPress: () => {
+            // Navigate to delete account confirmation screen
+            router.push('/auth/delete-account' as any);
+          },
+        },
+      ]
+    );
+  };
+
+  const handleResetPermissions = async () => {
+    try {
+      const permissionsKey = `permissionsShown_${authUser?.uid || 'anonymous'}`;
+      await AsyncStorage.removeItem(permissionsKey);
+      Alert.alert('Success', 'Permissions reset. You will see the permissions screen on next login.');
+    } catch (error) {
+      console.error('Error resetting permissions:', error);
+      Alert.alert('Error', 'Failed to reset permissions');
+    }
   };
 
   const styles = StyleSheet.create({
@@ -321,11 +354,29 @@ export default function Profile() {
             </View>
             <Ionicons name="chevron-forward" size={20} color="#B0B0B0" />
           </TouchableOpacity>
+          <TouchableOpacity style={styles.row} onPress={handleDeleteAccount}>
+            <View style={styles.iconWrap}><Ionicons name="trash-outline" size={22} color="#FF5252" /></View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.rowLabel, { color: '#FF5252' }]}>Delete Account</Text>
+              <Text style={styles.rowSub}>Permanently delete your account and data</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#B0B0B0" />
+          </TouchableOpacity>
         </View>
 
         {/* Preferences Section */}
         <Text style={styles.sectionTitle}>Preferences</Text>
-        <ThemeToggle />
+        <View style={styles.card}>
+          <ThemeToggle />
+          <TouchableOpacity style={styles.row} onPress={handleResetPermissions}>
+            <View style={styles.iconWrap}><Ionicons name="refresh" size={22} color="#B0B0B0" /></View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowLabel}>Reset Permissions</Text>
+              <Text style={styles.rowSub}>Show permissions screen again</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#B0B0B0" />
+          </TouchableOpacity>
+        </View>
 
         {/* Support & Legal Section */}
         <Text style={styles.sectionTitle}>Support & Legal</Text>

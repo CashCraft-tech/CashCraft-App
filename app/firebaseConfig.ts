@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
 import { getFirestore, collection } from 'firebase/firestore';
+import { getMessaging, isSupported } from 'firebase/messaging';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Your Firebase configuration
@@ -21,7 +22,13 @@ export const auth = initializeAuth(app, {
   persistence: getReactNativePersistence(AsyncStorage)
 });
 
-
+// Initialize Firebase Cloud Messaging
+export const messaging = isSupported().then(supported => {
+  if (supported) {
+    return getMessaging(app);
+  }
+  return null;
+});
 
 export const db = getFirestore(app);
 

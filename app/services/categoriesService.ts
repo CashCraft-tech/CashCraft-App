@@ -86,12 +86,98 @@ export const categoriesService = {
     }
   },
 
-  // Delete a category
-  async deleteCategory(categoryId: string): Promise<void> {
+  // Delete a category and move its transactions to "Others"
+  async deleteCategory(categoryId: string, userId: string): Promise<void> {
     try {
+      // First, get or create the "Others" category
+      const othersCategory = await this.getOthersCategory(userId);
+
+      // Get all transactions for this category
+      const { transactionsService } = await import('./transactionsService');
+      const transactions = await transactionsService.getTransactionsByCategory(userId, categoryId);
+
+      // Only update transactions if there are any
+      if (transactions && transactions.length > 0) {
+        console.log(`Moving ${transactions.length} transactions to "Others" category`);
+        
+        // Update all transactions to use "Others" category
+        const updatePromises = transactions.map(transaction => 
+          transactionsService.updateTransaction(transaction.id!, {
+            categoryId: othersCategory.id!,
+            categoryName: othersCategory.name,
+            categoryIcon: othersCategory.icon,
+            categoryColor: othersCategory.color
+          })
+        );
+
+        // Wait for all transaction updates to complete
+        await Promise.all(updatePromises);
+        console.log('All transactions moved successfully');
+      } else {
+        console.log('No transactions found for this category');
+      }
+
+      // Now delete the category
       await deleteDoc(doc(db, 'categories', categoryId));
+      console.log('Category deleted successfully');
     } catch (error) {
       console.error('Error deleting category:', error);
+      throw error;
+    }
+  },
+
+  // Check if a category has any transactions
+  async hasTransactions(userId: string, categoryId: string): Promise<boolean> {
+    try {
+      const { transactionsService } = await import('./transactionsService');
+      const transactions = await transactionsService.getTransactionsByCategory(userId, categoryId);
+      return transactions && transactions.length > 0;
+    } catch (error) {
+      console.error('Error checking transactions:', error);
+      return false;
+    }
+  },
+
+  // Get the "Others" category for a user, create if it doesn't exist
+  async getOthersCategory(userId: string): Promise<Category> {
+    try {
+      const q = query(
+        collection(db, 'categories'),
+        where('userId', '==', userId),
+        where('name', '==', 'Others')
+      );
+      
+      const querySnapshot = await getDocs(q);
+      
+      if (querySnapshot.empty) {
+        // Create "Others" category if it doesn't exist
+        const othersCategoryId = await this.addCategory({
+          userId,
+          name: 'Others',
+          icon: 'ellipsis-h',
+          color: '#9E9E9E',
+          type: 'expense',
+          isDefault: true
+        });
+        
+        return {
+          id: othersCategoryId,
+          userId,
+          name: 'Others',
+          icon: 'ellipsis-h',
+          color: '#9E9E9E',
+          type: 'expense',
+          isDefault: true
+        };
+      }
+      
+      const doc = querySnapshot.docs[0];
+      return {
+        id: doc.id,
+        ...doc.data()
+      } as Category;
+    } catch (error) {
+      console.error('Error getting/creating Others category:', error);
       throw error;
     }
   },
@@ -105,6 +191,7 @@ export const categoriesService = {
       { userId, name: 'Shopping', icon: 'shopping-bag', color: '#B388FF', type: 'expense', isDefault: true },
       { userId, name: 'Entertainment', icon: 'movie', color: '#4CAF50', type: 'expense', isDefault: true },
       { userId, name: 'Health', icon: 'heart', color: '#F06292', type: 'expense', isDefault: true },
+      { userId, name: 'Others', icon: 'ellipsis-h', color: '#9E9E9E', type: 'expense', isDefault: true },
       { userId, name: 'Salary', icon: 'cash', color: '#4CAF50', type: 'income', isDefault: true },
       { userId, name: 'Freelance', icon: 'laptop', color: '#2196F3', type: 'income', isDefault: true },
     ];

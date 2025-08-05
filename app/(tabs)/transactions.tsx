@@ -20,7 +20,7 @@ const margin = 40; // Total margins (20 top + 20 bottom)
 // Calculate flexible height for listCard
 const listCardHeight = screenHeight - tabBarHeight - headerHeight - margin;
 
-const CATEGORIES = ['Food', 'Transport', 'Shopping', 'Bills', 'Health'];
+const CATEGORIES = ['Food', 'Transport', 'Shopping', 'Bills', 'Health', 'Entertainment', 'Others'];
 const TYPES = ['Income', 'Expense'];
 const SORT_OPTIONS = [
   { label: 'Newest First', value: 'newest' },
@@ -66,6 +66,50 @@ export default function Transactions() {
     setRefreshing(true);
     await fetchTransactions();
     setRefreshing(false);
+  };
+
+  // Delete transaction function
+  const handleDeleteTransaction = async (transaction: Transaction) => {
+    if (!transaction.id) {
+      Alert.alert('Error', 'Cannot delete transaction: Missing transaction ID');
+      return;
+    }
+
+    Alert.alert(
+      'Delete Transaction',
+      `Are you sure you want to delete "${transaction.description}" for ₹${transaction.amount}?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await transactionsService.deleteTransaction(transaction.id!);
+              
+              // Remove from local state
+              setTransactions(prev => prev.filter(tx => tx.id !== transaction.id));
+              
+              // Show success notification
+              Alert.alert('Success', 'Transaction deleted successfully');
+              
+              // Send notification
+              await notificationService.sendLocalNotification(
+                'Transaction Deleted',
+                `"${transaction.description}" has been removed from your records.`,
+                { type: 'transaction_deleted', icon: 'trash-outline' }
+              );
+            } catch (error) {
+              console.error('Error deleting transaction:', error);
+              Alert.alert('Error', 'Failed to delete transaction. Please try again.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const getIconComponent = (iconName: string, color: string, size: number = 24) => {
@@ -469,13 +513,21 @@ export default function Transactions() {
 
         const matchesSearch = searchableText.includes(searchTerm);
         const matchesType = !filterType || tx.type === filterType.toLowerCase();
-        const matchesCategory = !filterCategory || tx.categoryName === filterCategory;
+        const matchesCategory = !filterCategory || tx.categoryName?.toLowerCase() === filterCategory.toLowerCase();
         
         return matchesSearch && matchesType && matchesCategory;
       } else {
         // No search term, just apply filters
         const matchesType = !filterType || tx.type === filterType.toLowerCase();
-        const matchesCategory = !filterCategory || tx.categoryName === filterCategory;
+        const matchesCategory = !filterCategory || tx.categoryName?.toLowerCase() === filterCategory.toLowerCase();
+        
+        // Debug logging
+        if (filterCategory) {
+          console.log('Filtering by category:', filterCategory);
+          console.log('Transaction category:', tx.categoryName);
+          console.log('Matches category:', matchesCategory);
+        }
+        
         return matchesType && matchesCategory;
       }
     })
@@ -495,6 +547,19 @@ export default function Transactions() {
     });
 
   const totalAmount = filteredTransactions.reduce((sum, tx) => sum + tx.amount, 0);
+
+  // Get unique categories from actual transaction data
+  const getUniqueCategories = () => {
+    const categories = new Set<string>();
+    transactions.forEach(tx => {
+      if (tx.categoryName) {
+        categories.add(tx.categoryName);
+      }
+    });
+    return Array.from(categories).sort();
+  };
+
+  const uniqueCategories = getUniqueCategories();
 
   const styles = StyleSheet.create({
     container: {
@@ -609,11 +674,17 @@ export default function Transactions() {
       borderColor: theme.border,
     },
     txRow: { 
-      flexDirection: 'row', 
-      alignItems: 'center', 
-      padding: 18, 
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 20, 
+      paddingHorizontal: 20, 
       borderBottomWidth: 1, 
       borderColor: theme.borderLight 
+    },
+    txContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
     },
     txIcon: { 
       marginRight: 12, 
@@ -636,6 +707,10 @@ export default function Transactions() {
       color: theme.text, 
       fontWeight: 'bold', 
       marginLeft: 8 
+    },
+    deleteButton: {
+      padding: 8,
+      marginLeft: 10,
     },
     totalRow: { 
       flexDirection: 'row', 
@@ -860,24 +935,34 @@ export default function Transactions() {
               data={filteredTransactions}
               keyExtractor={(item) => item.id || Math.random().toString()}
               renderItem={({ item }) => (
-                <TouchableOpacity 
-                  style={styles.txRow}
-                  onPress={() => router.push({
-                    pathname: '/components/transaction-details',
-                    params: { transaction: JSON.stringify(item) }
-                  })}
-                >
-                  <View style={styles.txIcon}>
-                    {getIconComponent(item.categoryIcon || 'category', item.categoryColor || '#4CAF50', 20)}
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.txLabel}>{item.description}</Text>
-                    <Text style={styles.txDate}>{formatDateShort(item.date)}</Text>
-                  </View>
-                  <Text style={[styles.txAmount, { color: item.type === 'income' ? theme.success : theme.error }]}>
-                    {item.type === 'income' ? '+' : '-'}₹ {item.amount.toLocaleString()}
-                  </Text>
-                </TouchableOpacity>
+                <View style={styles.txRow}>
+                  <TouchableOpacity 
+                    style={styles.txContent}
+                    onPress={() => router.push({
+                      pathname: '/components/transaction-details',
+                      params: { transaction: JSON.stringify(item) }
+                    })}
+                  >
+                    <View style={styles.txIcon}>
+                      {getIconComponent(item.categoryIcon || 'category', item.categoryColor || '#4CAF50', 20)}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.txLabel}>{item.description}</Text>
+                      <Text style={styles.txDate}>{formatDateShort(item.date)}</Text>
+                    </View>
+                    <Text style={[styles.txAmount, { color: item.type === 'income' ? theme.success : theme.error }]}>
+                      {item.type === 'income' ? '+' : '-'}₹ {item.amount.toLocaleString()}
+                    </Text>
+                  </TouchableOpacity>
+                  
+                  {/* Delete Button */}
+                  <TouchableOpacity 
+                    style={styles.deleteButton}
+                    onPress={() => handleDeleteTransaction(item)}
+                  >
+                    <Ionicons name="trash-outline" size={20} color={theme.error} />
+                  </TouchableOpacity>
+                </View>
               )}
               refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} />
@@ -969,7 +1054,7 @@ export default function Transactions() {
               
               <Text style={styles.modalSectionTitle}>Filter by Category</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 16 }}>
-                {CATEGORIES.map(cat => (
+                {uniqueCategories.map(cat => (
                   <TouchableOpacity 
                     key={cat} 
                     style={[styles.filterChip, filterCategory === cat && styles.filterChipActive]}

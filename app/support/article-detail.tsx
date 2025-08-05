@@ -3,21 +3,25 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { HelpArticle } from '../services/supportService';
+import { useTheme } from '../context/ThemeContext';
 
 export default function ArticleDetail() {
+  const { theme } = useTheme();
   const { article } = useLocalSearchParams();
   const articleData: HelpArticle = article ? JSON.parse(article as string) : null;
 
   if (!articleData) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+        <StatusBar style={theme.statusBarStyle} />
         <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle" size={64} color="#B0B0B0" />
-          <Text style={styles.errorTitle}>Article Not Found</Text>
-          <Text style={styles.errorMessage}>The requested article could not be loaded.</Text>
+          <Ionicons name="alert-circle" size={64} color={theme.textTertiary} />
+          <Text style={[styles.errorTitle, { color: theme.textSecondary }]}>Article Not Found</Text>
+          <Text style={[styles.errorMessage, { color: theme.textTertiary }]}>The requested article could not be loaded.</Text>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backButtonText}>Go Back</Text>
+            <Text style={[styles.backButtonText, { color: theme.primary }]}>Go Back</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -35,31 +39,32 @@ export default function ArticleDetail() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <StatusBar style={theme.statusBarStyle} />
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#333" />
+            <Ionicons name="arrow-back" size={24} color={theme.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Help Article</Text>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>Help Article</Text>
           <View style={styles.placeholder} />
         </View>
 
         {/* Article Content */}
-        <View style={styles.articleContainer}>
-          <Text style={styles.articleTitle}>{articleData.title}</Text>
+        <View style={[styles.articleContainer, { backgroundColor: theme.card }]}>
+          <Text style={[styles.articleTitle, { color: theme.text }]}>{articleData.title}</Text>
           
           <View style={styles.articleMeta}>
             <View style={styles.metaItem}>
-              <Ionicons name="calendar-outline" size={16} color="#666" />
-              <Text style={styles.metaText}>
+              <Ionicons name="calendar-outline" size={16} color={theme.textSecondary} />
+              <Text style={[styles.metaText, { color: theme.textSecondary }]}>
                 {formatDate(articleData.createdAt)}
               </Text>
             </View>
             <View style={styles.metaItem}>
-              <Ionicons name="folder-outline" size={16} color="#666" />
-              <Text style={styles.metaText}>
+              <Ionicons name="folder-outline" size={16} color={theme.textSecondary} />
+              <Text style={[styles.metaText, { color: theme.textSecondary }]}>
                 {articleData.category.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
               </Text>
             </View>
@@ -67,26 +72,40 @@ export default function ArticleDetail() {
 
           <View style={styles.tagsContainer}>
             {articleData.tags.map((tag, index) => (
-              <View key={index} style={styles.tag}>
-                <Text style={styles.tagText}>{tag}</Text>
+              <View key={index} style={[styles.tag, { backgroundColor: theme.surface }]}>
+                <Text style={[styles.tagText, { color: theme.textSecondary }]}>{tag}</Text>
               </View>
             ))}
           </View>
 
           <View style={styles.contentContainer}>
-            <Text style={styles.contentText}>{articleData.content}</Text>
+            <Text style={[styles.contentText, { color: theme.text }]}>{articleData.content}</Text>
           </View>
         </View>
 
         {/* Related Actions */}
-        <View style={styles.actionsContainer}>
-          <Text style={styles.actionsTitle}>Was this article helpful?</Text>
+        <View style={[styles.actionsContainer, { backgroundColor: theme.card }]}>
+          <Text style={[styles.actionsTitle, { color: theme.text }]}>Was this article helpful?</Text>
           <View style={styles.actionButtons}>
-            <TouchableOpacity style={[styles.actionButton, styles.helpfulButton]}>
+            <TouchableOpacity style={[
+              styles.actionButton, 
+              styles.helpfulButton, 
+              { 
+                backgroundColor: theme.surface,
+                borderColor: '#4caf50' 
+              }
+            ]}>
               <Ionicons name="thumbs-up" size={20} color="#4caf50" />
               <Text style={styles.helpfulButtonText}>Yes</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionButton, styles.notHelpfulButton]}>
+            <TouchableOpacity style={[
+              styles.actionButton, 
+              styles.notHelpfulButton, 
+              { 
+                backgroundColor: theme.surface,
+                borderColor: '#f44336' 
+              }
+            ]}>
               <Ionicons name="thumbs-down" size={20} color="#f44336" />
               <Text style={styles.notHelpfulButtonText}>No</Text>
             </TouchableOpacity>
@@ -94,13 +113,13 @@ export default function ArticleDetail() {
         </View>
 
         {/* Contact Support */}
-        <View style={styles.contactSection}>
-          <Text style={styles.contactTitle}>Still need help?</Text>
-          <Text style={styles.contactSubtitle}>
+        <View style={[styles.contactSection, { backgroundColor: theme.card }]}>
+          <Text style={[styles.contactTitle, { color: theme.text }]}>Still need help?</Text>
+          <Text style={[styles.contactSubtitle, { color: theme.textSecondary }]}>
             If this article didn't answer your question, our support team is here to help.
           </Text>
           <TouchableOpacity 
-            style={styles.contactButton}
+            style={[styles.contactButton, { backgroundColor: theme.primary }]}
             onPress={() => router.push('/support/contact')}
           >
             <Ionicons name="mail" size={20} color="#fff" />
@@ -115,7 +134,6 @@ export default function ArticleDetail() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FB',
   },
   scrollView: {
     flex: 1,
@@ -126,9 +144,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
   },
   backButton: {
     padding: 8,
@@ -136,13 +152,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
   },
   placeholder: {
     width: 40,
   },
   articleContainer: {
-    backgroundColor: '#fff',
     margin: 20,
     borderRadius: 12,
     padding: 20,
@@ -155,7 +169,6 @@ const styles = StyleSheet.create({
   articleTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#222',
     marginBottom: 16,
     lineHeight: 32,
   },
@@ -171,7 +184,6 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 14,
-    color: '#666',
   },
   tagsContainer: {
     flexDirection: 'row',
@@ -180,14 +192,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   tag: {
-    backgroundColor: '#f0f0f0',
     borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
   tagText: {
     fontSize: 12,
-    color: '#666',
     fontWeight: '500',
   },
   contentContainer: {
@@ -195,11 +205,9 @@ const styles = StyleSheet.create({
   },
   contentText: {
     fontSize: 16,
-    color: '#333',
     lineHeight: 24,
   },
   actionsContainer: {
-    backgroundColor: '#fff',
     marginHorizontal: 20,
     marginBottom: 20,
     borderRadius: 12,
@@ -213,7 +221,6 @@ const styles = StyleSheet.create({
   actionsTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#222',
     marginBottom: 16,
     textAlign: 'center',
   },
@@ -231,12 +238,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   helpfulButton: {
-    backgroundColor: '#f0f9ff',
     borderWidth: 1,
     borderColor: '#4caf50',
   },
   notHelpfulButton: {
-    backgroundColor: '#fff5f5',
     borderWidth: 1,
     borderColor: '#f44336',
   },
@@ -251,7 +256,6 @@ const styles = StyleSheet.create({
     color: '#f44336',
   },
   contactSection: {
-    backgroundColor: '#fff',
     marginHorizontal: 20,
     marginBottom: 40,
     borderRadius: 12,
@@ -265,19 +269,16 @@ const styles = StyleSheet.create({
   contactTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#222',
     marginBottom: 8,
     textAlign: 'center',
   },
   contactSubtitle: {
     fontSize: 14,
-    color: '#666',
     textAlign: 'center',
     marginBottom: 20,
     lineHeight: 20,
   },
   contactButton: {
-    backgroundColor: '#4caf50',
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 24,
@@ -300,19 +301,16 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#666',
     marginTop: 16,
     marginBottom: 8,
   },
   errorMessage: {
     fontSize: 16,
-    color: '#888',
     textAlign: 'center',
     marginBottom: 24,
   },
   backButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#4caf50',
   },
 }); 

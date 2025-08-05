@@ -7,9 +7,11 @@ import {
   updatePassword,
   reauthenticateWithCredential,
   EmailAuthProvider,
+  deleteUser,
   User
 } from 'firebase/auth';
 import { auth } from '../firebaseConfig';
+import { userDeletionService } from './userDeletionService';
 
 export interface AuthError {
   code: string;
@@ -152,6 +154,46 @@ export const authService = {
 
       // Update password
       await updatePassword(user, newPassword);
+      
+      return { success: true };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: {
+          code: error.code,
+          message: this.getErrorMessage(error.code)
+        }
+      };
+    }
+  },
+
+  // Delete user account (requires re-authentication)
+  async deleteAccount(password: string): Promise<{ success: boolean; error?: AuthError }> {
+    try {
+      const user = auth.currentUser;
+      if (!user || !user.email) {
+        return {
+          success: false,
+          error: {
+            code: 'auth/user-not-found',
+            message: 'No user is currently signed in.'
+          }
+        };
+      }
+
+      // Re-authenticate user before deletion
+      const credential = EmailAuthProvider.credential(user.email, password);
+      await reauthenticateWithCredential(user, credential);
+
+      // Delete user data from Firestore first
+      const deletionResult = await userDeletionService.deleteUserData(user.uid);
+      if (!deletionResult.success) {
+        console.warn('Failed to delete user data from Firestore:', deletionResult.error);
+        // Continue with account deletion even if Firestore deletion fails
+      }
+
+      // Delete the user account
+      await deleteUser(user);
       
       return { success: true };
     } catch (error: any) {

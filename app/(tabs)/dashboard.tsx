@@ -116,38 +116,41 @@ export default function Dashboard() {
           startDate = new Date(now.getFullYear(), now.getMonth(), 1);
       }
 
-      // Fetch transactions for the selected period
-      const transactions = await transactionsService.getTransactionsByDateRange(user.uid, startDate, now);
+      // Fetch data in parallel for better performance
+      const [transactions, firebaseCategories] = await Promise.all([
+        transactionsService.getTransactionsByDateRange(user.uid, startDate, now),
+        categoriesService.getUserCategories(user.uid)
+      ]);
       
-      // Calculate stats
-      const incomeTransactions = transactions.filter((t: Transaction) => t.type === 'income');
-      const expenseTransactions = transactions.filter((t: Transaction) => t.type === 'expense');
+      // Calculate stats efficiently
+      const stats = transactions.reduce((acc: TransactionStats, t: Transaction) => {
+        if (t.type === 'income') {
+          acc.totalIncome += t.amount;
+        } else {
+          acc.totalExpense += t.amount;
+        }
+        return acc;
+      }, { totalIncome: 0, totalExpense: 0, balance: 0, transactionCount: transactions.length });
       
-      const totalIncome = incomeTransactions.reduce((sum: number, t: Transaction) => sum + t.amount, 0);
-      const totalExpense = expenseTransactions.reduce((sum: number, t: Transaction) => sum + t.amount, 0);
-      const balance = totalIncome - totalExpense;
-      
-      setStats({
-        totalIncome,
-        totalExpense,
-        balance,
-        transactionCount: transactions.length
-      });
+      stats.balance = stats.totalIncome - stats.totalExpense;
+      setStats(stats);
 
-      // Get categories for spending breakdown
-      const firebaseCategories = await categoriesService.getUserCategories(user.uid);
+      // Create category map for faster lookups
+      const categoryMap = new Map(firebaseCategories.map(c => [c.id, c]));
       
-      // Calculate spending by category
-      const categorySpending: { [key: string]: number } = {};
-      expenseTransactions.forEach((transaction: Transaction) => {
-        const category = firebaseCategories.find((c: FirebaseCategory) => c.id === transaction.categoryId);
-        if (category) {
-          categorySpending[category.name] = (categorySpending[category.name] || 0) + transaction.amount;
+      // Calculate spending by category efficiently
+      const categorySpending = new Map<string, number>();
+      transactions.forEach((transaction: Transaction) => {
+        if (transaction.type === 'expense') {
+          const category = categoryMap.get(transaction.categoryId);
+          if (category) {
+            categorySpending.set(category.name, (categorySpending.get(category.name) || 0) + transaction.amount);
+          }
         }
       });
 
       // Convert to chart data
-      const chartData: Category[] = Object.entries(categorySpending).map(([name, amount]) => {
+      const chartData: Category[] = Array.from(categorySpending.entries()).map(([name, amount]) => {
         const category = firebaseCategories.find((c: FirebaseCategory) => c.name === name);
         return {
           label: name,
@@ -159,11 +162,11 @@ export default function Dashboard() {
 
       setCategories(chartData);
 
-      // Calculate top spending categories
-      const topCategories = Object.entries(categorySpending)
+      // Calculate top spending categories efficiently
+      const topCategories = Array.from(categorySpending.entries())
         .map(([name, amount]) => {
           const category = firebaseCategories.find((c: FirebaseCategory) => c.name === name);
-          const percent = totalExpense > 0 ? (amount / totalExpense) * 100 : 0;
+          const percent = stats.totalExpense > 0 ? (amount / stats.totalExpense) * 100 : 0;
           return {
             label: name,
             value: amount,
@@ -185,7 +188,9 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    fetchData();
+    if (user?.uid) {
+      fetchData();
+    }
   }, [user?.uid, period]);
 
   const onRefresh = async () => {
@@ -194,7 +199,7 @@ export default function Dashboard() {
     setRefreshing(false);
   };
 
-  const getIconComponent = (iconName: string, color: string, size: number = 24) => {
+  const getIconComponent = React.useCallback((iconName: string, color: string, size: number = 24) => {
     const iconMap: { [key: string]: React.ReactNode } = {
       'food': <MaterialIcons name="restaurant" size={size} color={color} />,
       'transport': <MaterialIcons name="directions-car" size={size} color={color} />,
@@ -210,7 +215,7 @@ export default function Dashboard() {
       'other': <MaterialIcons name="more-horiz" size={size} color={color} />
     };
     return iconMap[iconName] || <MaterialIcons name="category" size={size} color={color} />;
-  };
+  }, []);
 
   const handlePeriodChange = (selectedPeriod: string): void => {
     setPeriod(selectedPeriod);
@@ -342,6 +347,7 @@ export default function Dashboard() {
       color: theme.textInverse,
     },
     sectionTitle: {
+     
       fontSize: 18,
       fontWeight: 'bold',
       color: theme.text,

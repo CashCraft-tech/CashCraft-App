@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 
 
+
 export default function Signup() {
   const router = useRouter();
   const scrollViewRef = useRef<ScrollView>(null);
@@ -131,6 +132,7 @@ export default function Signup() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
+        bounces={false}
       >
         <View style={styles.header}>
           <Image source={require("../../assets/images/icon.png")} style={styles.logo} />
@@ -172,7 +174,7 @@ export default function Signup() {
            <View style={styles.inputContainer}>
              <TextInput
                style={styles.input}
-               placeholder="Create a password (min 6 characters)"
+               placeholder="Create a password"
                value={form.password}
                onChangeText={v => handleChange("password", v)}
                secureTextEntry={!showPassword}
@@ -305,6 +307,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
     paddingTop: 40,
+    paddingBottom: 40,
   },
   scrollContentAndroid: {
     paddingBottom: 20,
@@ -474,6 +477,7 @@ const styles = StyleSheet.create({
     color: "#888",
     textAlign: "center",
     marginTop: 16,
+    marginBottom: 20,
     lineHeight: 18,
   },
   link: {

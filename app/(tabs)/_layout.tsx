@@ -1,16 +1,32 @@
 import { View } from 'react-native';
-import { Tabs } from "expo-router";
+import { Tabs, Redirect } from "expo-router";
 import { Ionicons, MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
 import { Platform } from "react-native";
 import NotificationScreen from '../components/notifications';
 import { useTheme } from '../context/ThemeContext';
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from '../context/AuthContext';
 
 export default function RootLayout() 
 {
   const { theme } = useTheme();
+  const { user, loading } = useAuth();
+  
+  // Show loading screen while checking authentication
+  if (loading) {
+    return null;
+  }
+
+  // Redirect to login if not authenticated
+  if (!user) {
+    return <Redirect href="/auth/login" />;
+  }
+  
+  const Container = SafeAreaView;
+  const containerProps = { edges: ['bottom' as const] };
   
   return (
-    <View style={{ flex: 1, backgroundColor: theme.background }}>
+    <Container style={{ flex: 1, backgroundColor: theme.tabBarBackground }} {...containerProps}>
       <Tabs
         screenOptions={{
           headerShown: false,
@@ -21,16 +37,17 @@ export default function RootLayout()
             left: 0,
             right: 0,
             backgroundColor: theme.tabBarBackground,
-            height: Platform.OS === "ios" ? 80 : 90,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: -2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 8,
-            elevation: 8,
+            height: 60,
             borderTopWidth: 1,
-            borderTopColor: theme.tabBarBorder,
-            paddingBottom: Platform.OS === "ios" ? 20 : 8,
+            borderColor: theme.tabBarBorder,
+            paddingBottom: 8,
             paddingTop: 8,
+            // Remove all shadows
+            shadowColor: 'transparent',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0,
+            shadowRadius: 0,
+            elevation: 0,
           },
           tabBarItemStyle: {
             flex: 1,
@@ -112,7 +129,6 @@ export default function RootLayout()
           }}
         />
       </Tabs>
-    </View>
-    
+    </Container>
   );
 }

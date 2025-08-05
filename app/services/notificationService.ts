@@ -3,7 +3,7 @@ import * as Device from 'expo-device';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { doc, setDoc, getDoc, addDoc, collection } from 'firebase/firestore';
-import { db, auth } from '../firebaseConfig';
+import { db, auth, messaging } from '../firebaseConfig';
 
 // Configure notification behavior
 Notifications.setNotificationHandler({
@@ -176,6 +176,13 @@ class NotificationServiceImpl {
         return null;
       }
 
+      // Check if Firebase messaging is available
+      const messagingInstance = await messaging;
+      if (!messagingInstance) {
+        console.log('Firebase messaging not available on this platform');
+        return null;
+      }
+
       const token = await Notifications.getExpoPushTokenAsync({
         projectId: 'e9b9481b-8889-42b9-a96f-87f0961cbe8d', // Your EAS project ID
       });
@@ -184,6 +191,7 @@ class NotificationServiceImpl {
       return token.data;
     } catch (error) {
       console.error('Error getting push token:', error);
+      // Don't throw error, just return null to prevent app crashes
       return null;
     }
   }
@@ -369,25 +377,25 @@ class NotificationServiceImpl {
         return false;
       }
 
-      // Get push token
+      // Get push token (this may fail in development builds, which is okay)
       const token = await this.getPushToken();
       if (!token) {
-        console.log('No push token received');
-        return false;
-      }
-
-      // Save token to Firestore
-      const saved = await this.saveTokenToFirestore(userId, token);
-      if (!saved) {
-        console.log('Failed to save token to Firestore');
-        return false;
+        console.log('No push token received (this is normal in development builds)');
+        // Don't return false here, as local notifications can still work
+      } else {
+        // Save token to Firestore only if we got one
+        const saved = await this.saveTokenToFirestore(userId, token);
+        if (!saved) {
+          console.log('Failed to save token to Firestore');
+        }
       }
 
       console.log('Notifications initialized successfully for user:', userId);
       return true;
     } catch (error) {
       console.error('Error initializing notifications:', error);
-      return false;
+      // Don't fail completely, as local notifications can still work
+      return true;
     }
   }
 

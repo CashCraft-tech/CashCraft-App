@@ -1,8 +1,10 @@
 import { Stack } from 'expo-router';
 import { useEffect } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import NavigationBarManager from './components/NavigationBarManager';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -28,15 +30,22 @@ function RootLayoutContent() {
     return () => clearTimeout(fallbackTimeout);
   }, [loading]);
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <>
+      <NavigationBarManager />
+      <Stack screenOptions={{ headerShown: false }} />
+    </>
+  );
 }
 
 export default function RootLayout() {
   return (
-    <ThemeProvider>
+    <SafeAreaProvider>
       <AuthProvider>
-        <RootLayoutContent />
+        <ThemeProvider>
+          <RootLayoutContent />
+        </ThemeProvider>
       </AuthProvider>
-    </ThemeProvider>
+    </SafeAreaProvider>
   );
 } 

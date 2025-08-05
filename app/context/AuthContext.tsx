@@ -23,14 +23,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('Setting up auth state listener...');
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       console.log('Auth state changed:', user ? `User: ${user.email}` : 'No user');
-      console.log('Current loading state:', loading);
       
-      // Add a small delay to ensure AsyncStorage is properly loaded
-      setTimeout(() => {
-        setUser(user);
-        setLoading(false);
-        console.log('Auth state updated - user:', user ? 'logged in' : 'not logged in');
-      }, 100);
+      // Set user immediately without delay
+      setUser(user);
+      setLoading(false);
+      console.log('Auth state updated - user:', user ? 'logged in' : 'not logged in');
       
       // Initialize notifications for logged-in user
       if (user) {

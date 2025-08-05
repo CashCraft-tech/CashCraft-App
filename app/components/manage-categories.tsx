@@ -12,9 +12,51 @@ import { notificationService } from '../services/notificationService';
 
 const ICONS = [
   'cart', 'car', 'home', 'utensils', 'gamepad', 'plane', 'gift', 'heart', 'credit-card', 'shopping-bag', 'bolt', 'dollar-sign', 'music', 'film', 'book', 'medkit', 'paw', 'tshirt', 'mobile-alt', 'glass-cheers',
+  'restaurant', 'car-sport', 'receipt', 'movie', 'ellipsis-h', 'cash', 'laptop'
 ];
+// Helper function to determine icon color based on background color
+const getIconColor = (backgroundColor: string): string => {
+  // Convert hex to RGB
+  const hex = backgroundColor.replace('#', '');
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
+  
+  // Calculate luminance
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  
+  // Return white for dark backgrounds, dark gray for light backgrounds
+  return luminance > 0.5 ? '#222' : '#FFFFFF';
+};
+
 const ICON_MAP: { [key: string]: ReactElement } = {
-  cart: <FontAwesome5 name="shopping-cart" size={22} color="#222" />, car: <FontAwesome5 name="car" size={22} color="#222" />, home: <FontAwesome5 name="home" size={22} color="#222" />, utensils: <FontAwesome5 name="utensils" size={22} color="#222" />, gamepad: <FontAwesome5 name="gamepad" size={22} color="#222" />, plane: <FontAwesome5 name="plane" size={22} color="#222" />, gift: <FontAwesome5 name="gift" size={22} color="#222" />, heart: <FontAwesome5 name="heart" size={22} color="#222" />, 'credit-card': <FontAwesome5 name="credit-card" size={22} color="#222" />, 'shopping-bag': <FontAwesome5 name="shopping-bag" size={22} color="#222" />, bolt: <FontAwesome5 name="bolt" size={22} color="#222" />, 'dollar-sign': <FontAwesome5 name="dollar-sign" size={22} color="#222" />, music: <FontAwesome5 name="music" size={22} color="#222" />, film: <FontAwesome5 name="film" size={22} color="#222" />, book: <FontAwesome5 name="book" size={22} color="#222" />, medkit: <FontAwesome5 name="medkit" size={22} color="#222" />, paw: <FontAwesome5 name="paw" size={22} color="#222" />, tshirt: <FontAwesome5 name="tshirt" size={22} color="#222" />, 'mobile-alt': <FontAwesome5 name="mobile-alt" size={22} color="#222" />, 'glass-cheers': <FontAwesome5 name="glass-cheers" size={22} color="#222" />
+  cart: <FontAwesome5 name="shopping-cart" size={22} color="#222" />, 
+  car: <FontAwesome5 name="car" size={22} color="#222" />, 
+  home: <FontAwesome5 name="home" size={22} color="#222" />, 
+  utensils: <FontAwesome5 name="utensils" size={22} color="#222" />, 
+  gamepad: <FontAwesome5 name="gamepad" size={22} color="#222" />, 
+  plane: <FontAwesome5 name="plane" size={22} color="#222" />, 
+  gift: <FontAwesome5 name="gift" size={22} color="#222" />, 
+  heart: <FontAwesome5 name="heart" size={22} color="#222" />, 
+  'credit-card': <FontAwesome5 name="credit-card" size={22} color="#222" />, 
+  'shopping-bag': <FontAwesome5 name="shopping-bag" size={22} color="#222" />, 
+  bolt: <FontAwesome5 name="bolt" size={22} color="#222" />, 
+  'dollar-sign': <FontAwesome5 name="dollar-sign" size={22} color="#222" />, 
+  music: <FontAwesome5 name="music" size={22} color="#222" />, 
+  film: <FontAwesome5 name="film" size={22} color="#222" />, 
+  book: <FontAwesome5 name="book" size={22} color="#222" />, 
+  medkit: <FontAwesome5 name="medkit" size={22} color="#222" />, 
+  paw: <FontAwesome5 name="paw" size={22} color="#222" />, 
+  tshirt: <FontAwesome5 name="tshirt" size={22} color="#222" />, 
+  'mobile-alt': <FontAwesome5 name="mobile-alt" size={22} color="#222" />, 
+  'glass-cheers': <FontAwesome5 name="glass-cheers" size={22} color="#222" />,
+  restaurant: <Ionicons name="restaurant" size={22} color="#222" />,
+  'car-sport': <Ionicons name="car-sport" size={22} color="#222" />,
+  receipt: <Ionicons name="receipt" size={22} color="#222" />,
+  movie: <Ionicons name="film" size={22} color="#222" />,
+  'ellipsis-h': <FontAwesome5 name="ellipsis-h" size={22} color="#222" />,
+  cash: <Ionicons name="cash" size={22} color="#222" />,
+  laptop: <Ionicons name="laptop" size={22} color="#222" />
 };
 const COLORS = [
   '#2979FF', '#43A047', '#AB47BC', '#FF9800', '#F06292', '#00BCD4', '#8BC34A', '#FFD600', '#FF5252', '#00B8D4', '#7C4DFF', '#FFB300', '#FF1744', '#00E676', '#D500F9', '#FF6F00', '#607D8B', '#90A4AE', '#B0BEC5', '#FFA726'
@@ -132,11 +174,27 @@ export default function ManageCategories() {
 
   const handleDelete = async (idx: number) => {
     const categoryToDelete = categories[idx];
-    if (!categoryToDelete.id) return;
+    if (!categoryToDelete.id || !user?.uid) return;
+    
+    // Prevent deletion of "Others" category only
+    if (categoryToDelete.name === 'Others') {
+      Alert.alert(
+        'Cannot Delete',
+        'The "Others" category cannot be deleted as it is used to store transactions from deleted categories.',
+        [{ text: 'OK', style: 'default' }]
+      );
+      return;
+    }
+    
+    // Show different message for default categories
+    const isDefault = categoryToDelete.isDefault;
+    const message = isDefault 
+      ? `Are you sure you want to delete the default category "${categoryToDelete.name}"? All transactions in this category will be moved to "Others". You can always recreate it later.`
+      : `Are you sure you want to delete "${categoryToDelete.name}"? All transactions in this category will be moved to "Others".`;
     
     Alert.alert(
       'Delete Category',
-      `Are you sure you want to delete "${categoryToDelete.name}"? This action cannot be undone.`,
+      message,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -144,11 +202,20 @@ export default function ManageCategories() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await categoriesService.deleteCategory(categoryToDelete.id!);
+              await categoriesService.deleteCategory(categoryToDelete.id!, user.uid);
               setCategories(categories.filter((_, i) => i !== idx));
+              
+              // Show appropriate message based on whether there were transactions
+              Alert.alert(
+                'Category Deleted',
+                `"${categoryToDelete.name}" has been deleted successfully. Any transactions in this category have been moved to "Others".`
+              );
             } catch (error) {
               console.error('Error deleting category:', error);
-              Alert.alert('Error', 'Failed to delete category');
+              Alert.alert(
+                'Error', 
+                'Failed to delete category. Please check your internet connection and try again.'
+              );
             }
           },
         },
@@ -214,7 +281,11 @@ export default function ManageCategories() {
             <Text style={[styles.cardSub, { color: theme.textSecondary }]}>Manage and customize your spending categories</Text>
             {categories.map((cat, idx) => (
               <View key={cat.id} style={styles.catRow}>
-                <View style={[styles.catIcon, { backgroundColor: cat.color }]}>{ICON_MAP[cat.icon]}</View>
+                <View style={[styles.catIcon, { backgroundColor: cat.color }]}>
+                  {React.isValidElement(ICON_MAP[cat.icon])
+                    ? React.cloneElement(ICON_MAP[cat.icon] as any, { color: getIconColor(cat.color) })
+                    : ICON_MAP[cat.icon]}
+                </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.catName, { color: theme.text }]}>{cat.name}</Text>
                   <Text style={[styles.catSub, { color: theme.textSecondary }]}>Custom category</Text>
@@ -223,7 +294,7 @@ export default function ManageCategories() {
                   <TouchableOpacity style={styles.catAction} onPress={() => handleEdit(idx)}>
                     <Ionicons name="pencil" size={16} color={theme.textSecondary} />
                   </TouchableOpacity>
-                  {!cat.isDefault && (
+                  {cat.name !== 'Others' && (
                     <TouchableOpacity style={styles.catAction} onPress={() => handleDelete(idx)}>
                       <Ionicons name="trash" size={16} color={theme.error} />
                     </TouchableOpacity>
@@ -237,8 +308,10 @@ export default function ManageCategories() {
           <View style={[styles.tipsCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <Text style={[styles.tipsTitle, { color: theme.text }]}>Quick Tips</Text>
             <View style={styles.tipRow}><Text style={[styles.tipDot, { color: theme.primary }]}>•</Text><Text style={[styles.tipText, { color: theme.textSecondary }]}>Tap the edit icon to change category icon and color</Text></View>
-            <View style={styles.tipRow}><Text style={[styles.tipDot, { color: theme.primary }]}>•</Text><Text style={[styles.tipText, { color: theme.textSecondary }]}>Default categories cannot be deleted</Text></View>
+            <View style={styles.tipRow}><Text style={[styles.tipDot, { color: theme.primary }]}>•</Text><Text style={[styles.tipText, { color: theme.textSecondary }]}>Only "Others" category cannot be deleted</Text></View>
             <View style={styles.tipRow}><Text style={[styles.tipDot, { color: theme.primary }]}>•</Text><Text style={[styles.tipText, { color: theme.textSecondary }]}>Choose meaningful icons for better organization</Text></View>
+            <View style={styles.tipRow}><Text style={[styles.tipDot, { color: theme.primary }]}>•</Text><Text style={[styles.tipText, { color: theme.textSecondary }]}>Deleted categories' transactions are moved to "Others"</Text></View>
+            <View style={styles.tipRow}><Text style={[styles.tipDot, { color: theme.primary }]}>•</Text><Text style={[styles.tipText, { color: theme.textSecondary }]}>Default categories can be deleted and recreated anytime</Text></View>
           </View>
 
           {/* Icon & Color Picker Modal */}
@@ -252,7 +325,11 @@ export default function ManageCategories() {
                   </TouchableOpacity>
                 </View>
                 <View style={styles.modalPreviewRow}>
-                  <View style={[styles.iconPreview, { backgroundColor: selectedColor, width: 48, height: 48 }]}> {ICON_MAP[selectedIcon]} </View>
+                  <View style={[styles.iconPreview, { backgroundColor: selectedColor, width: 48, height: 48 }]}>
+                    {React.isValidElement(ICON_MAP[selectedIcon])
+                      ? React.cloneElement(ICON_MAP[selectedIcon] as any, { color: getIconColor(selectedColor) })
+                      : ICON_MAP[selectedIcon]}
+                  </View>
                   <View style={{ marginLeft: 12 }}>
                     <Text style={[styles.modalPreviewLabel, { color: theme.text }]}>Preview</Text>
                     <Text style={[styles.modalPreviewSub, { color: theme.textSecondary }]}>Selected icon and color</Text>
@@ -300,60 +377,77 @@ export default function ManageCategories() {
           {/* Add Category Modal */}
           <Modal visible={addModalVisible} animationType="slide" transparent>
             <View style={styles.modalOverlay}>
-              <View style={styles.addModalCard}>
+              <View style={[styles.addModalCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
                 <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Create New Category</Text>
+                  <Text style={[styles.modalTitle, { color: theme.text }]}>Create New Category</Text>
                   <TouchableOpacity onPress={() => setAddModalVisible(false)}>
-                    <Ionicons name="close" size={24} color="#888" />
+                    <Ionicons name="close" size={24} color={theme.textSecondary} />
                   </TouchableOpacity>
                 </View>
                 {/* Step 1: Name */}
                 <View style={styles.addStepRow}>
-                  <View style={styles.addStepCircle}><Text style={addName.trim() ? styles.addStepCircleDone : styles.addStepCircleText}>{addName.trim() ? '1' : '1'}</Text></View>
-                  <Text style={styles.addStepLabel}>Category Name</Text>
+                  <View style={[styles.addStepCircle, { backgroundColor: addName.trim() ? theme.primary : theme.surface }]}>
+                    <Text style={[addName.trim() ? styles.addStepCircleDone : styles.addStepCircleText, { color: addName.trim() ? theme.textInverse : theme.textSecondary }]}>
+                      {addName.trim() ? '1' : '1'}
+                    </Text>
+                  </View>
+                  <Text style={[styles.addStepLabel, { color: theme.text }]}>Category Name</Text>
                 </View>
                 <TextInput
-                  style={styles.addInput}
+                  style={[styles.addInput, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
                   placeholder="e.g., Coffee & Snacks"
                   value={addName}
                   onChangeText={setAddName}
                   onFocus={() => setAddStep(1)}
-                  placeholderTextColor="#888"
+                  placeholderTextColor={theme.textTertiary}
                 />
                 {/* Step 2: Icon & Color */}
                 <View style={styles.addStepRow}>
-                  <View style={styles.addStepCircle}><Text style={addIcon && addColor ? styles.addStepCircleDone : styles.addStepCircleText}>{addIcon && addColor ? '2' : '2'}</Text></View>
-                  <Text style={styles.addStepLabel}>Choose Icon & Color</Text>
+                  <View style={[styles.addStepCircle, { backgroundColor: addIcon && addColor ? theme.primary : theme.surface }]}>
+                    <Text style={[addIcon && addColor ? styles.addStepCircleDone : styles.addStepCircleText, { color: addIcon && addColor ? theme.textInverse : theme.textSecondary }]}>
+                      {addIcon && addColor ? '2' : '2'}
+                    </Text>
+                  </View>
+                  <Text style={[styles.addStepLabel, { color: theme.text }]}>Choose Icon & Color</Text>
                 </View>
                 <TouchableOpacity
-                  style={styles.addIconPicker}
+                  style={[styles.addIconPicker, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder }]}
                   onPress={() => { setIconPickerVisible(true); setAddStep(2); }}
                   activeOpacity={0.8}
                 >
-                  <View style={[styles.iconPreview, { backgroundColor: addColor, width: 48, height: 48, marginRight: 12 }]}>{ICON_MAP[addIcon]}</View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.addIconPickerLabel}>{addIcon && addColor ? 'Icon & Color Selected' : 'Select Icon & Color'}</Text>
-                    <Text style={styles.addIconPickerSub}>Tap to choose from 36+ icons and colors</Text>
+                  <View style={[styles.iconPreview, { backgroundColor: addColor, width: 48, height: 48, marginRight: 12 }]}>
+                    {React.isValidElement(ICON_MAP[addIcon])
+                      ? React.cloneElement(ICON_MAP[addIcon] as any, { color: getIconColor(addColor) })
+                      : ICON_MAP[addIcon]}
                   </View>
-               
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.addIconPickerLabel, { color: theme.text }]}>{addIcon && addColor ? 'Icon & Color Selected' : 'Select Icon & Color'}</Text>
+                    <Text style={[styles.addIconPickerSub, { color: theme.textSecondary }]}>Tap to choose from 36+ icons and colors</Text>
+                  </View>
                 </TouchableOpacity>
                 {/* Preview */}
                 {canCreate && (
-                  <View style={styles.addPreviewCard}>
-                    <Text style={styles.addPreviewLabel}>Preview</Text>
+                  <View style={[styles.addPreviewCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                    <Text style={[styles.addPreviewLabel, { color: theme.text }]}>Preview</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-                      <View style={[styles.iconPreview, { backgroundColor: addColor, width: 36, height: 36 }]}>{ICON_MAP[addIcon]}</View>
+                      <View style={[styles.iconPreview, { backgroundColor: addColor, width: 36, height: 36 }]}>
+                        {React.isValidElement(ICON_MAP[addIcon])
+                          ? React.cloneElement(ICON_MAP[addIcon] as any, { color: getIconColor(addColor) })
+                          : ICON_MAP[addIcon]}
+                      </View>
                       <View style={{ marginLeft: 10 }}>
-                        <Text style={styles.catLabel}>{addName}</Text>
-                        <Text style={styles.catSpent}>Spent: ₹0</Text>
+                        <Text style={[styles.catLabel, { color: theme.text }]}>{addName}</Text>
+                        <Text style={[styles.catSpent, { color: theme.textSecondary }]}>Spent: ₹0</Text>
                       </View>
                     </View>
                   </View>
                 )}
                 <View style={styles.addModalFooterRow}>
-                  <TouchableOpacity style={styles.addModalBtn} onPress={() => setAddModalVisible(false)}><Text style={styles.secondaryBtnText}>Cancel</Text></TouchableOpacity>
+                  <TouchableOpacity style={[styles.addModalBtn, { backgroundColor: theme.surface, borderColor: theme.border }]} onPress={() => setAddModalVisible(false)}>
+                    <Text style={[styles.secondaryBtnText, { color: theme.text }]}>Cancel</Text>
+                  </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.addModalBtn, !canCreate && { backgroundColor: '#E0E0E0' }]}
+                    style={[styles.addModalBtn, { backgroundColor: canCreate ? theme.primary : theme.touchable }]}
                     disabled={!canCreate}
                     onPress={async () => {
                       if (!user?.uid) return;
@@ -387,29 +481,37 @@ export default function ManageCategories() {
                       }
                     }}
                   >
-                    <Text style={styles.primaryBtnText}>Create Category</Text>
+                    <Text style={[styles.primaryBtnText, { color: canCreate ? theme.textInverse : theme.textSecondary }]}>Create Category</Text>
                   </TouchableOpacity>
                 </View>
                 {/* Icon & Color Picker Modal (nested) */}
                 <Modal visible={iconPickerVisible} animationType="slide" transparent>
                   <View style={styles.modalOverlay}>
-                    <View style={styles.modalCard}>
+                    <View style={[styles.modalCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
                       <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>Choose Icon & Color</Text>
+                        <Text style={[styles.modalTitle, { color: theme.text }]}>Choose Icon & Color</Text>
                         <TouchableOpacity onPress={() => setIconPickerVisible(false)}>
-                          <Ionicons name="close" size={24} color="#888" />
+                          <Ionicons name="close" size={24} color={theme.textSecondary} />
                         </TouchableOpacity>
                       </View>
                       <View style={styles.modalPreviewRow}>
-                        <View style={[styles.iconPreview, { backgroundColor: addColor, width: 48, height: 48 }]}> {ICON_MAP[addIcon]} </View>
+                        <View style={[styles.iconPreview, { backgroundColor: addColor, width: 48, height: 48 }]}>
+                          {React.isValidElement(ICON_MAP[addIcon])
+                            ? React.cloneElement(ICON_MAP[addIcon] as any, { color: getIconColor(addColor) })
+                            : ICON_MAP[addIcon]}
+                        </View>
                         <View style={{ marginLeft: 12 }}>
-                          <Text style={styles.modalPreviewLabel}>Preview</Text>
-                          <Text style={styles.modalPreviewSub}>Selected icon and color</Text>
+                          <Text style={[styles.modalPreviewLabel, { color: theme.text }]}>Preview</Text>
+                          <Text style={[styles.modalPreviewSub, { color: theme.textSecondary }]}>Selected icon and color</Text>
                         </View>
                       </View>
                       <View style={styles.modalTabsRow}>
-                        <TouchableOpacity style={[styles.modalTab, addPickerTab === 'Icons' && styles.modalTabActive]} onPress={() => setAddPickerTab('Icons')}><Text style={addPickerTab === 'Icons' ? styles.modalTabTextActive : styles.modalTabText}>Icons</Text></TouchableOpacity>
-                        <TouchableOpacity style={[styles.modalTab, addPickerTab === 'Colors' && styles.modalTabActive]} onPress={() => setAddPickerTab('Colors')}><Text style={addPickerTab === 'Colors' ? styles.modalTabTextActive : styles.modalTabText}>Colors</Text></TouchableOpacity>
+                        <TouchableOpacity style={[styles.modalTab, addPickerTab === 'Icons' && styles.modalTabActive, { backgroundColor: addPickerTab === 'Icons' ? theme.primary : theme.surface, borderColor: theme.border }]} onPress={() => setAddPickerTab('Icons')}>
+                          <Text style={[addPickerTab === 'Icons' ? styles.modalTabTextActive : styles.modalTabText, { color: addPickerTab === 'Icons' ? theme.textInverse : theme.text }]}>Icons</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.modalTab, addPickerTab === 'Colors' && styles.modalTabActive, { backgroundColor: addPickerTab === 'Colors' ? theme.primary : theme.surface, borderColor: theme.border }]} onPress={() => setAddPickerTab('Colors')}>
+                          <Text style={[addPickerTab === 'Colors' ? styles.modalTabTextActive : styles.modalTabText, { color: addPickerTab === 'Colors' ? theme.textInverse : theme.text }]}>Colors</Text>
+                        </TouchableOpacity>
                       </View>
                       {addPickerTab === 'Icons' ? (
                         <FlatList
@@ -418,11 +520,11 @@ export default function ManageCategories() {
                           keyExtractor={item => item}
                           style={{ marginVertical: 8, alignSelf: 'center' }}
                           renderItem={({ item }) => (
-                            <TouchableOpacity style={[styles.iconGridBtn, addIcon === item && styles.iconGridBtnActive]} onPress={() => setAddIcon(item)}>
+                            <TouchableOpacity style={[styles.iconGridBtn, addIcon === item && styles.iconGridBtnActive, { backgroundColor: addIcon === item ? theme.primary + '20' : theme.surface }]} onPress={() => setAddIcon(item)}>
                               {React.isValidElement(ICON_MAP[item])
                                 ? (addIcon === item
-                                    ? React.cloneElement(ICON_MAP[item] as any, { color: '#2979FF' })
-                                    : ICON_MAP[item])
+                                    ? React.cloneElement(ICON_MAP[item] as any, { color: theme.primary })
+                                    : React.cloneElement(ICON_MAP[item] as any, { color: theme.text }))
                                 : ICON_MAP[item]}
                             </TouchableOpacity>
                           )}
@@ -434,13 +536,17 @@ export default function ManageCategories() {
                           keyExtractor={item => item}
                           style={{ marginVertical: 8, alignSelf: 'center' }}
                           renderItem={({ item }) => (
-                            <TouchableOpacity style={[styles.colorGridBtn, { backgroundColor: item, borderWidth: addColor === item ? 3 : 0, borderColor: addColor === item ? '#2979FF' : 'transparent' }]} onPress={() => setAddColor(item)} />
+                            <TouchableOpacity style={[styles.colorGridBtn, { backgroundColor: item, borderWidth: addColor === item ? 3 : 0, borderColor: addColor === item ? theme.primary : 'transparent' }]} onPress={() => setAddColor(item)} />
                           )}
                         />
                       )}
                       <View style={styles.modalFooterRow}>
-                        <TouchableOpacity style={styles.secondaryBtn} onPress={() => setIconPickerVisible(false)}><Text style={styles.secondaryBtnText}>Cancel</Text></TouchableOpacity>
-                        <TouchableOpacity style={styles.primaryBtn} onPress={() => setIconPickerVisible(false)}><Text style={styles.primaryBtnText}>Confirm</Text></TouchableOpacity>
+                        <TouchableOpacity style={[styles.secondaryBtn, { backgroundColor: theme.surface, borderColor: theme.border }]} onPress={() => setIconPickerVisible(false)}>
+                          <Text style={[styles.secondaryBtnText, { color: theme.text }]}>Cancel</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: theme.primary }]} onPress={() => setIconPickerVisible(false)}>
+                          <Text style={[styles.primaryBtnText, { color: theme.textInverse }]}>Confirm</Text>
+                        </TouchableOpacity>
                       </View>
                     </View>
                   </View>
@@ -503,7 +609,7 @@ const styles = StyleSheet.create({
   iconGridBtn: { width: 48, height: 48, borderRadius: 12, backgroundColor: '#F5F5F5', alignItems: 'center', justifyContent: 'center', margin: 4 },
   iconGridBtnActive: { backgroundColor: '#E3F2FD', borderWidth: 2, borderColor: '#2979FF' },
   colorGridBtn: { width: 36, height: 36, borderRadius: 18, margin: 6 },
-  modalFooterRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 10 },
+  modalFooterRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 10, gap: 12 },
   headerWrap: {
     flexDirection: 'row',
     alignItems: 'center',

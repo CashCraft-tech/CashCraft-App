@@ -42,6 +42,10 @@ interface ThemeColors {
   // Status bar
   statusBarBackground: string;
   statusBarStyle: 'light' | 'dark';
+  
+  // Navigation bar (Android)
+  navigationBarStyle: 'light' | 'dark';
+  navigationBarBackground: string;
 }
 
 const lightTheme: ThemeColors = {
@@ -75,11 +79,14 @@ const lightTheme: ThemeColors = {
   
   statusBarBackground: '#FFFFFF',
   statusBarStyle: 'dark',
+  
+  navigationBarStyle: 'dark',
+  navigationBarBackground: '#FFFFFF',
 };
 
 const darkTheme: ThemeColors = {
   background: '#121212',
-  surface: '#1E1E1E',
+  surface: '#121212',
   card: '#2D2D2D',
   modal: '#2D2D2D',
   
@@ -102,12 +109,15 @@ const darkTheme: ThemeColors = {
   inputBackground: '#2D2D2D',
   inputBorder: '#404040',
   
-  tabBarBackground: '#1E1E1E',
-  tabBarBorder: '#404040',
+  tabBarBackground: '#121212',
+  tabBarBorder: '#3A3A3A',
   tabBarInactive: '#808080',
   
   statusBarBackground: '#121212',
   statusBarStyle: 'light',
+  
+  navigationBarStyle: 'light',
+  navigationBarBackground: '#121212',
 };
 
 interface ThemeContextType {
@@ -166,17 +176,18 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     saveThemeMode(mode);
   };
 
-  const getCurrentTheme = (): ThemeColors => {
+  const theme = React.useMemo(() => {
     if (themeMode === 'system') {
       return systemColorScheme === 'dark' ? darkTheme : lightTheme;
     }
     return themeMode === 'dark' ? darkTheme : lightTheme;
-  };
+  }, [themeMode, systemColorScheme]);
 
-  const theme = getCurrentTheme();
-  const isDark = themeMode === 'system' 
-    ? systemColorScheme === 'dark' 
-    : themeMode === 'dark';
+  const isDark = React.useMemo(() => {
+    return themeMode === 'system' 
+      ? systemColorScheme === 'dark' 
+      : themeMode === 'dark';
+  }, [themeMode, systemColorScheme]);
 
   if (!isLoaded) {
     return null; // Or a loading screen

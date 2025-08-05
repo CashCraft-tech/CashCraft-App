@@ -8,7 +8,12 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "androidStatusBar": {
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#004F3A"
+    },
+    "androidNavigationBar": {
+      "visible": "immersive",
+      "backgroundColor": "#FFFFFF",
+      "barStyle": "dark-content"
     },
     "ios": {
       "supportsTablet": true
@@ -18,9 +23,10 @@
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#004F3A"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": false,
+      "softwareKeyboardLayoutMode": "pan"
     },
     "web": {
       "bundler": "metro",
@@ -33,8 +39,8 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
-          "resizeMode": "cover",
-          "backgroundColor": "#ffffff"
+          "resizeMode": "contain",
+          "backgroundColor": "#004F3A"
         }
       ],
       [
@@ -43,7 +49,8 @@
           "icon": "./assets/images/notification-icon.png",
           "color": "#4caf50"
         }
-      ]
+      ],
+      "expo-navigation-bar"
     ],
     "experiments": {
       "typedRoutes": true
