@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Modal, Dimensions, ActivityIndicator, RefreshControl, Alert } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import { transactionsService, Transaction } from '../services/transactionsService';
@@ -58,9 +58,18 @@ export default function Transactions() {
     }
   };
 
+  // Initial load
   useEffect(() => {
     fetchTransactions();
   }, [user]);
+
+  // Refresh when tab comes into focus (when user navigates to this tab)
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('Transactions tab focused - refreshing data');
+      fetchTransactions();
+    }, [user])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);

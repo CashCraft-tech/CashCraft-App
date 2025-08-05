@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from "react-native";
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { MaterialIcons, Ionicons, Feather, FontAwesome5 } from '@expo/vector-icons';
 import { Svg, G, Circle } from 'react-native-svg';
 import { categoriesService, Category as FirebaseCategory } from '../services/categoriesService';
@@ -192,6 +192,16 @@ export default function Dashboard() {
       fetchData();
     }
   }, [user?.uid, period]);
+
+  // Refresh when tab comes into focus (when user navigates to this tab)
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('Dashboard tab focused - refreshing data');
+      if (user?.uid) {
+        fetchData();
+      }
+    }, [user, period])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);

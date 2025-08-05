@@ -3,7 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, TouchableOpacity, Image } from "react-native";
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { categoriesService, Category } from '../services/categoriesService';
 import { transactionsService, Transaction, TransactionStats } from '../services/transactionsService';
@@ -376,6 +376,14 @@ export default function Home() {
   useEffect(() => {
     fetchData();
   }, [user]);
+
+  // Refresh when tab comes into focus (when user navigates to this tab)
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('Home tab focused - refreshing data');
+      fetchData();
+    }, [user])
+  );
 
   const getIconComponent = (iconName: string, color: string, size: number = 24) => {
     const iconMap: { [key: string]: any } = {
