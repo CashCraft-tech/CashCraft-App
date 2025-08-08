@@ -1,17 +1,18 @@
 import { initializeApp } from 'firebase/app';
 import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
+
 import { getFirestore, collection } from 'firebase/firestore';
 import { getMessaging, isSupported } from 'firebase/messaging';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Your Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyBAQp3DAHj-16bmWi9JwbnEvpfmXKhySoI",
-  authDomain: "bachat-991f9.firebaseapp.com",
-  projectId: "bachat-991f9",
-  storageBucket: "bachat-991f9.firebasestorage.app",
-  messagingSenderId: "888504934769",
-  appId: "1:888504934769:android:ebf8927e8ab117606156d0"
+  apiKey: "AIzaSyBIMqCgK2yZtwuuye9IKhdghK7VsJ5RCh8",
+  authDomain: "cashcraft-c8a02.firebaseapp.com",
+  projectId: "cashcraft-c8a02",
+  storageBucket: "cashcraft-c8a02.firebasestorage.app",
+  messagingSenderId: "930540132801",
+  appId: "1:930540132801:android:54571d7d7d6fecdbad7740"
 };
 
 // Initialize Firebase
