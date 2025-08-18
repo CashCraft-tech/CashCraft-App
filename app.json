@@ -16,7 +16,8 @@
       "barStyle": "dark-content"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.cashcraft.app"
     },
     "android": {
       "package": "com.cashcraft.com",

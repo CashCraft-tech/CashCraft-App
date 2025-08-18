@@ -21,6 +21,7 @@ module.exports = () => ({
     },
     ios: {
       supportsTablet: true,
+      bundleIdentifier: "com.cashcraft.app",
     },
     android: {
       package: "com.cashcraft.com",
