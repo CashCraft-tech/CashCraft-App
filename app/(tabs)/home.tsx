@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, TouchableOpacity, Image } from "react-native";
+import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Image } from "react-native";
+import { HomeScreenSkeleton } from '../components/skeleton';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
@@ -314,9 +315,16 @@ export default function Home() {
 
     try {
       setLoading(true);
-      
-      // Fetch user profile
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
+
+      // Run independent Firebase queries concurrently to speed up loading
+      const [userDoc, userCategories, allTransactions, userStats] = await Promise.all([
+        getDoc(doc(db, 'users', user.uid)),
+        categoriesService.getUserCategories(user.uid),
+        transactionsService.getUserTransactions(user.uid, 1000),
+        transactionsService.getTransactionStats(user.uid)
+      ]);
+
+      // Set user profile
       if (userDoc.exists()) {
         const userData = userDoc.data();
         setUserProfile({
@@ -325,20 +333,16 @@ export default function Home() {
           lastName: userData.lastName
         });
       }
-      
-      // Fetch categories
-      const userCategories = await categoriesService.getUserCategories(user.uid);
+
+      // Set categories
       setCategories(userCategories.filter(cat => cat.type === 'expense'));
-      
-      // Fetch recent transactions
-      const userTransactions = await transactionsService.getUserTransactions(user.uid, 5);
-      console.log('Home screen - fetched transactions:', userTransactions);
-      setTransactions(userTransactions);
-      console.log('Home screen - transactions state set to:', userTransactions.length, 'transactions');
-      
-      // Fetch stats
-      const userStats = await transactionsService.getTransactionStats(user.uid);
+
+      // Extract recent transactions directly from the larger fetch
+      setTransactions(allTransactions.slice(0, 5));
+
+      // Set stats
       setStats(userStats);
+
       // Notify if balance is very low (<=10% of total income)
       if (
         userStats.totalIncome > 0 &&
@@ -349,21 +353,16 @@ export default function Home() {
         await notificationService.sendLowBalanceAlert();
         window.__sentLowBalanceNotif = true;
       }
-      
-      // Calculate category spending
-      const allTransactions = await transactionsService.getUserTransactions(user.uid, 1000);
+
+      // Calculate category spending from all transactions
       const spendingByCategory: { [key: string]: number } = {};
-      
       allTransactions.forEach(tx => {
         if (tx.type === 'expense' && tx.categoryId) {
           spendingByCategory[tx.categoryId] = (spendingByCategory[tx.categoryId] || 0) + tx.amount;
         }
       });
-      
       setCategorySpending(spendingByCategory);
-      
-      // No app update notification - only low balance alerts
-      
+
       setFirebaseStatus('Firebase Connected! ✅');
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -380,7 +379,6 @@ export default function Home() {
   // Refresh when tab comes into focus (when user navigates to this tab)
   useFocusEffect(
     React.useCallback(() => {
-      console.log('Home tab focused - refreshing data');
       fetchData();
     }, [user])
   );
@@ -462,15 +460,7 @@ export default function Home() {
     : `https://api.dicebear.com/7.x/adventurer/png?seed=${encodeURIComponent(nameSeed)}&gender=female`;
 
   if (loading) {
-    return (
-      <SafeAreaView style={styles.container} edges={['top','left','right']}>
-        <StatusBar style={theme.statusBarStyle} />
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={{ marginTop: 16, color: theme.textSecondary }}>Loading your data...</Text>
-        </View>
-      </SafeAreaView>
-    );
+    return <HomeScreenSkeleton />;
   }
 
   return (

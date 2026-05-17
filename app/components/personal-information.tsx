@@ -7,35 +7,25 @@ import {
   TextInput,
   Image,
   Alert,
-  Platform,
-  ActivityIndicator,
+  Animated,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
-import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../firebaseConfig';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { StatusBar } from 'expo-status-bar';
-
-interface PersonalInfo {
-  fullName: string;
-  email: string;
-  phone: string;
-  gender: string;
-  profession: string;
-  username: string;
-  address?: string;
-  dateOfBirth?: string;
-}
+import { ActivityIndicator } from 'react-native';
+import { ProfileFormSkeleton } from './skeleton';
+import { UserService, PersonalInfo } from '../services/userService';
+import { LinearGradient } from 'expo-linear-gradient';
+import { authService } from '../services/authService';
+import { auth } from '../firebaseConfig';
 
 export default function PersonalInformation() {
   const { user } = useAuth();
-  const { theme } = useTheme();
-  
-  console.log('PersonalInformation component - user:', user?.email, 'uid:', user?.uid);
-  console.log('PersonalInformation component - user object:', user);
+  const { theme, isDark } = useTheme();
+
   const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
     fullName: '',
     email: '',
@@ -51,59 +41,53 @@ export default function PersonalInformation() {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
-  // Test function to manually check Firestore data
-  const testFirestoreData = async () => {
-    if (!user) return;
-    
-    try {
-      console.log('=== TESTING FIRESTORE DATA ===');
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      console.log('Document exists:', userDoc.exists());
-      
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        console.log('Raw Firestore data:', JSON.stringify(data, null, 2));
-        console.log('Field names:', Object.keys(data));
-        console.log('fullName:', data.fullName);
-        console.log('phone:', data.phone);
-        console.log('gender:', data.gender);
-        console.log('profession:', data.profession);
-        console.log('username:', data.username);
-      }
-      console.log('=== END TEST ===');
-    } catch (error) {
-      console.error('Test error:', error);
-    }
-  };
-
-  // Fetch user data from Firestore
   useEffect(() => {
     const fetchUserData = async () => {
-      if (!user) {
-        console.log('No user found in AuthContext');
-        return;
-      }
-      
-      console.log('Fetching user data for UID:', user.uid);
-      
-      // Run test function first
-      await testFirestoreData();
-      
+      if (!user) return;
+
       try {
         setLoading(true);
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
+
+        // Run network requests concurrently to speed up loading
+        const [_, userData] = await Promise.all([
+          user.reload().catch(e => {}),
+          UserService.getUserProfile(auth.currentUser?.uid || user.uid)
+        ]);
         
-        console.log('User document exists:', userDoc.exists());
-        
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          console.log('User data from Firestore:', userData);
-          console.log('Available fields:', Object.keys(userData));
-          
+        const currentUser = auth.currentUser || user;
+        const authEmail = currentUser.email || '';
+
+        if (userData) {
+          // If Firestore is completely missing the email, we just sync it quietly.
+          // We only trigger the forced logout if Firestore HAS an email and it differs
+          // (which means they successfully verified an email change).
+          if (authEmail && userData.email && authEmail !== userData.email) {
+            await UserService.syncEmail(currentUser.uid, authEmail);
+
+            // Log the user out for security and to reset all session state
+            Alert.alert(
+              'Email Verified!',
+              'For security reasons, we are logging you out. Please login again with the email you just verified.',
+              [
+                { 
+                  text: 'OK', 
+                  onPress: () => {
+                    authService.signOut();
+                  } 
+                }
+              ]
+            );
+            return; // Stop rendering this screen
+          } else if (authEmail && !userData.email) {
+            // Quietly backfill the email in Firestore if it was missing
+            UserService.syncEmail(currentUser.uid, authEmail).catch(console.error);
+          }
+
           setPersonalInfo({
             fullName: userData.fullName || '',
-            email: userData.email || user.email || '',
+            email: authEmail || userData.email || '',
             phone: userData.phone || '',
             gender: userData.gender || '',
             profession: userData.profession || '',
@@ -111,58 +95,35 @@ export default function PersonalInformation() {
             address: userData.address || '',
             dateOfBirth: userData.dateOfBirth || '',
           });
-          
-          console.log('Personal info set to:', {
-            fullName: userData.fullName || '',
-            email: userData.email || user.email || '',
-            phone: userData.phone || '',
-            gender: userData.gender || '',
-            profession: userData.profession || '',
-            username: userData.username || '',
-          });
         } else {
-          console.log('User document does not exist in Firestore');
-          // Create user document with basic info from Firebase Auth
+          const basicUserData = {
+            uid: user.uid,
+            email: user.email || '',
+            fullName: user.displayName || '',
+            phone: '',
+            gender: '',
+            profession: '',
+            username: '',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+
           try {
-            const basicUserData = {
-              uid: user.uid,
-              email: user.email || '',
-              fullName: user.displayName || '',
-              phone: '',
-              gender: '',
-              profession: '',
-              username: '',
-              createdAt: new Date(),
-              updatedAt: new Date()
-            };
-            
-            await setDoc(doc(db, 'users', user.uid), basicUserData);
-            console.log('Created basic user document in Firestore');
-            
-            setPersonalInfo({
-              fullName: user.displayName || '',
-              email: user.email || '',
-              phone: '',
-              gender: '',
-              profession: '',
-              username: '',
-              address: '',
-              dateOfBirth: '',
-            });
+            await UserService.createUserProfile(user.uid, basicUserData);
           } catch (createError) {
             console.error('Error creating user document:', createError);
-            // Still set basic info from Firebase Auth
-            setPersonalInfo({
-              fullName: user.displayName || '',
-              email: user.email || '',
-              phone: '',
-              gender: '',
-              profession: '',
-              username: '',
-              address: '',
-              dateOfBirth: '',
-            });
           }
+
+          setPersonalInfo({
+            fullName: user.displayName || '',
+            email: user.email || '',
+            phone: '',
+            gender: '',
+            profession: '',
+            username: '',
+            address: '',
+            dateOfBirth: '',
+          });
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -176,41 +137,49 @@ export default function PersonalInformation() {
   }, [user]);
 
   const pickImage = async () => {
-    try {
-      Alert.alert('Image Picker', 'Image picker functionality would be implemented here');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to pick image');
-    }
+    Alert.alert('Coming Soon', 'Profile photo upload will be available soon.');
   };
 
   const handleSave = async () => {
     if (!user) return;
-    
+
     try {
       setSaving(true);
-      await updateDoc(doc(db, 'users', user.uid), {
-        ...personalInfo,
-        updatedAt: new Date(),
-      });
-      Alert.alert('Success', 'Personal information updated successfully!');
-      setIsEditing(false);
-    } catch (error) {
+      const result = await UserService.updateUserProfile(user, personalInfo);
+
+      if (result?.emailVerificationSent) {
+        Alert.alert(
+          'Verification Email Sent',
+          `A verification link has been sent to ${personalInfo.email}. Your email will update after you click the link.`,
+          [{ text: 'OK', onPress: () => setIsEditing(false) }]
+        );
+      } else {
+        Alert.alert('Saved!', 'Your profile has been updated.');
+        setIsEditing(false);
+      }
+    } catch (error: any) {
       console.error('Error updating user data:', error);
-      Alert.alert('Error', 'Failed to update personal information');
+      if (error.code === 'auth/requires-recent-login') {
+        Alert.alert('Re-authentication Required', 'Please log out and log back in before changing your email.');
+      } else if (error.code === 'auth/invalid-email') {
+        Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      } else if (error.code === 'auth/email-already-in-use') {
+        Alert.alert('Email Taken', 'That email is already linked to another account.');
+      } else {
+        Alert.alert('Error', 'Failed to update profile. Please try again.');
+      }
     } finally {
       setSaving(false);
     }
   };
 
   const handleCancel = () => {
-    // Reset to original values by refetching from Firestore
     if (user) {
-      getDoc(doc(db, 'users', user.uid)).then((userDoc) => {
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
+      UserService.getUserProfile(user.uid).then((userData) => {
+        if (userData) {
           setPersonalInfo({
             fullName: userData.fullName || '',
-            email: userData.email || '',
+            email: user.email || userData.email || '',
             phone: userData.phone || '',
             gender: userData.gender || '',
             profession: userData.profession || '',
@@ -225,393 +194,224 @@ export default function PersonalInformation() {
   };
 
   const updateField = (field: keyof PersonalInfo, value: string) => {
-    setPersonalInfo(prev => ({
-      ...prev,
-      [field]: value,
-    }));
+    setPersonalInfo(prev => ({ ...prev, [field]: value }));
   };
 
   const getInitials = (name: string) => {
     if (!name || name.trim() === '') return '?';
-    return name
-      .split(' ')
-      .map(word => word.charAt(0))
-      .join('')
-      .toUpperCase();
+    return name.split(' ').map(w => w.charAt(0)).join('').toUpperCase().slice(0, 2);
   };
 
-  // Check if user has any profile data
-  const hasProfileData = personalInfo.fullName || personalInfo.phone || personalInfo.gender || personalInfo.profession || personalInfo.username;
-
   if (loading) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }} edges={['top','left','right','bottom']}>
-        <StatusBar style={theme.statusBarStyle} />
-        <KeyboardAwareScrollView
-          contentContainerStyle={{
-            flex: 1,
-            justifyContent: 'center',
-            alignItems: 'center',
-            paddingHorizontal: 20,
-          }}
-          enableOnAndroid={true}
-          extraScrollHeight={20}
-          keyboardShouldPersistTaps="handled"
-          enableAutomaticScroll={true}
-        >
-          <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={{ marginTop: 16, color: theme.textSecondary }}>Loading your information...</Text>
-        </KeyboardAwareScrollView>
-      </SafeAreaView>
-    );
+    return <ProfileFormSkeleton />;
   }
 
-  // Show empty state if no profile data
-  if (!hasProfileData) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }} edges={['top','left','right','bottom']}>
-        <StatusBar style={theme.statusBarStyle} />
-        <KeyboardAwareScrollView
-          contentContainerStyle={{
-            paddingTop: 24,
-            paddingBottom: 40,
-            paddingHorizontal: 20,
-          }}
-          enableOnAndroid={true}
-          extraScrollHeight={20}
-          keyboardShouldPersistTaps="handled"
-          enableAutomaticScroll={true}
-        >
-          <View style={styles.header}>
-            <Text style={[styles.headerTitle, { color: theme.text }]}>Personal Information</Text>
-            <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Complete your profile to get started</Text>
-          </View>
-
-          {/* Empty State */}
-          <View style={[styles.emptyStateContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
-            <View style={[styles.emptyStateAvatar, { backgroundColor: theme.surface }]}>
-              <FontAwesome5 name="user-circle" size={80} color={theme.primary} />
-            </View>
-            <Text style={[styles.emptyStateTitle, { color: theme.text }]}>Complete Your Profile</Text>
-            <Text style={[styles.emptyStateMessage, { color: theme.textSecondary }]}>
-              Add your personal information to personalize your CashCraft experience. 
-              Your profile helps us provide better insights and recommendations.
-            </Text>
-            <TouchableOpacity 
-              style={[styles.emptyStateButton, { backgroundColor: theme.primary }]} 
-              onPress={() => setIsEditing(true)}
-            >
-              <Text style={[styles.emptyStateButtonText, { color: theme.textInverse }]}>Start Adding Information</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Basic Information Section (in edit mode) */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Basic Information</Text>
-            
-            {/* Full Name */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Full Name</Text>
-              <View style={styles.inputWrapper}>
-                <TextInput
-                  style={[styles.textInput, !isEditing && styles.disabledInput]}
-                  value={personalInfo.fullName}
-                  onChangeText={(text) => updateField('fullName', text)}
-                  editable={isEditing}
-                  placeholder="Enter your full name"
-                  placeholderTextColor="#888"
-                />
-              </View>
-            </View>
-
-            {/* Email Address */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Email Address</Text>
-              <View style={styles.inputWrapper}>
-                <Ionicons name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
-                <TextInput
-                  style={[styles.textInput, styles.inputWithIcon, !isEditing && styles.disabledInput]}
-                  value={personalInfo.email}
-                  onChangeText={(text) => updateField('email', text)}
-                  editable={isEditing}
-                  placeholder="Enter your email"
-                  keyboardType="email-address"
-                  placeholderTextColor="#888"
-                />
-              </View>
-            </View>
-
-            {/* Phone Number */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Phone Number</Text>
-              <View style={styles.inputWrapper}>
-                <Ionicons name="call-outline" size={20} color="#666" style={styles.inputIcon} />
-                <TextInput
-                  style={[styles.textInput, styles.inputWithIcon, !isEditing && styles.disabledInput]}
-                  value={personalInfo.phone}
-                  onChangeText={(text) => updateField('phone', text)}
-                  editable={isEditing}
-                  placeholder="Enter your phone number"
-                  keyboardType="phone-pad"
-                  placeholderTextColor="#888"
-                />
-              </View>
-            </View>
-
-            {/* Gender */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Gender</Text>
-              <View style={styles.inputWrapper}>
-                <TextInput
-                  style={[styles.textInput, !isEditing && styles.disabledInput]}
-                  value={personalInfo.gender}
-                  onChangeText={(text) => updateField('gender', text)}
-                  editable={isEditing}
-                  placeholder="Enter your gender"
-                  placeholderTextColor="#888"
-                />
-              </View>
-            </View>
-
-            {/* Profession */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Profession</Text>
-              <View style={styles.inputWrapper}>
-                <TextInput
-                  style={[styles.textInput, !isEditing && styles.disabledInput]}
-                  value={personalInfo.profession}
-                  onChangeText={(text) => updateField('profession', text)}
-                  editable={isEditing}
-                  placeholder="Enter your profession"
-                  placeholderTextColor="#888"
-                />
-              </View>
-            </View>
-
-            {/* Username */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Username</Text>
-              <View style={styles.inputWrapper}>
-                <TextInput
-                  style={[styles.textInput, !isEditing && styles.disabledInput]}
-                  value={personalInfo.username}
-                  onChangeText={(text) => updateField('username', text)}
-                  editable={isEditing}
-                  placeholder="Enter your username"
-                  placeholderTextColor="#888"
-                />
-              </View>
-            </View>
-          </View>
-        </KeyboardAwareScrollView>
-      </SafeAreaView>
-    );
-  }
+  const gradientColors: [string, string] = isDark
+    ? ['#1B3A1F', '#121212']
+    : ['#2E7D32', '#4CAF50'];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }} edges={['top','left','right','bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }} edges={['top', 'left', 'right', 'bottom']}>
       <StatusBar style={theme.statusBarStyle} />
+
       <KeyboardAwareScrollView
-        contentContainerStyle={{
-          paddingTop: 24,
-          paddingBottom: 40,
-          paddingHorizontal: 20,
-        }}
-        enableOnAndroid={true}
+        contentContainerStyle={{ paddingBottom: 48 }}
+        enableOnAndroid
         extraScrollHeight={20}
         keyboardShouldPersistTaps="handled"
-        enableAutomaticScroll={true}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <Text style={[styles.headerTitle, { color: theme.text }]}>Personal Information</Text>
-          <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Manage your profile details</Text>
-        </View>
-
-        {/* Profile Header */}
-        <View style={[styles.profileHeader, { backgroundColor: theme.card, borderColor: theme.border }]}>
-          <TouchableOpacity style={styles.avatarContainer} onPress={pickImage}>
+        {/* ── Hero Header ── */}
+        <LinearGradient colors={gradientColors} style={styles.hero}>
+          {/* Avatar */}
+          <TouchableOpacity style={styles.avatarWrap} onPress={pickImage} activeOpacity={0.8}>
             {profileImage ? (
               <Image source={{ uri: profileImage }} style={styles.avatar} />
             ) : (
-              <View style={[styles.avatarPlaceholder, { backgroundColor: theme.primary }]}>
-                <Text style={[styles.avatarText, { color: theme.textInverse }]}>{getInitials(personalInfo.fullName)}</Text>
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarInitials}>{getInitials(personalInfo.fullName)}</Text>
               </View>
             )}
-            <View style={[styles.editAvatarButton, { backgroundColor: theme.primary }]}>
-              <Ionicons name="camera" size={16} color={theme.textInverse} />
+            <View style={styles.cameraChip}>
+              <Ionicons name="camera" size={14} color="#fff" />
             </View>
           </TouchableOpacity>
-          
-          <View style={styles.profileInfo}>
-            <Text style={[styles.profileName, { color: theme.text }]}>{personalInfo.fullName || 'Add your name'}</Text>
-            <Text style={[styles.profileEmail, { color: theme.textSecondary }]}>{personalInfo.email || 'Add your email'}</Text>
-          </View>
-          
-          <TouchableOpacity 
-            style={[styles.editButton, { backgroundColor: theme.primary }]} 
-            onPress={() => setIsEditing(!isEditing)}
+
+          <Text style={styles.heroName}>{personalInfo.fullName || 'Your Name'}</Text>
+          <Text style={styles.heroEmail}>{personalInfo.email || 'your@email.com'}</Text>
+
+          {personalInfo.profession ? (
+            <View style={styles.professionBadge}>
+              <Ionicons name="briefcase-outline" size={12} color="rgba(255,255,255,0.9)" />
+              <Text style={styles.professionBadgeText}>{personalInfo.profession}</Text>
+            </View>
+          ) : null}
+
+          {/* Edit / Done toggle */}
+          <TouchableOpacity
+            style={[styles.editToggle, isEditing && styles.editToggleActive]}
+            onPress={() => (isEditing ? handleCancel() : setIsEditing(true))}
+            activeOpacity={0.8}
           >
-            <Ionicons name={isEditing ? "checkmark" : "pencil"} size={20} color={theme.textInverse} />
+            <Ionicons name={isEditing ? 'close' : 'pencil'} size={15} color={isEditing ? '#F44336' : '#fff'} />
+            <Text style={[styles.editToggleText, isEditing && { color: '#F44336' }]}>
+              {isEditing ? 'Cancel' : 'Edit Profile'}
+            </Text>
           </TouchableOpacity>
-        </View>
+        </LinearGradient>
 
-        {/* Basic Information Section */}
-        <View style={[styles.section, { backgroundColor: theme.card, borderColor: theme.border }]}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Basic Information</Text>
-          
-          {/* Full Name */}
-          <View style={styles.inputContainer}>
-            <Text style={[styles.inputLabel, { color: theme.text }]}>Full Name</Text>
-            <View style={[styles.inputWrapper, { borderColor: theme.border, backgroundColor: theme.surface }]}>
-              <TextInput
-                style={[styles.textInput, !isEditing && styles.disabledInput, { color: theme.text, backgroundColor: theme.surface }]}
-                value={personalInfo.fullName}
-                onChangeText={(text) => updateField('fullName', text)}
-                editable={isEditing}
-                placeholder="Enter your full name"
-                placeholderTextColor={theme.textTertiary}
-              />
+        {/* ── Completion Bar (only when not editing and profile incomplete) ── */}
+        {!isEditing && (() => {
+          const fields = [personalInfo.fullName, personalInfo.phone, personalInfo.gender, personalInfo.profession, personalInfo.username, personalInfo.address, personalInfo.dateOfBirth];
+          const filled = fields.filter(Boolean).length;
+          const pct = Math.round((filled / fields.length) * 100);
+          if (pct === 100) return null;
+          return (
+            <View style={[styles.completionCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+              <View style={styles.completionRow}>
+                <Text style={[styles.completionLabel, { color: theme.text }]}>Profile Completion</Text>
+                <Text style={[styles.completionPct, { color: theme.primary }]}>{pct}%</Text>
+              </View>
+              <View style={[styles.completionTrack, { backgroundColor: theme.surface }]}>
+                <View style={[styles.completionFill, { width: `${pct}%` as any, backgroundColor: theme.primary }]} />
+              </View>
+              <Text style={[styles.completionHint, { color: theme.textTertiary }]}>
+                Tap <Text style={{ color: theme.primary }}>Edit Profile</Text> to complete your info
+              </Text>
             </View>
-          </View>
+          );
+        })()}
 
-          {/* Email Address */}
-          <View style={styles.inputContainer}>
-            <Text style={[styles.inputLabel, { color: theme.text }]}>Email Address</Text>
-            <View style={[styles.inputWrapper, { borderColor: theme.border, backgroundColor: theme.surface }]}>
-              <Ionicons name="mail-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
-              <TextInput
-                style={[styles.textInput, styles.inputWithIcon, !isEditing && styles.disabledInput, { color: theme.text, backgroundColor: theme.surface }]}
-                value={personalInfo.email}
-                onChangeText={(text) => updateField('email', text)}
-                editable={isEditing}
-                placeholder="Enter your email"
-                keyboardType="email-address"
-                placeholderTextColor={theme.textTertiary}
-              />
-            </View>
-          </View>
+        {/* ── Basic Info Section ── */}
+        <SectionCard title="Basic Information" icon="person-outline" theme={theme}>
+          <FieldRow
+            label="Full Name"
+            icon="person-outline"
+            value={personalInfo.fullName}
+            editable={isEditing}
+            focused={focusedField === 'fullName'}
+            onFocus={() => setFocusedField('fullName')}
+            onBlur={() => setFocusedField(null)}
+            onChangeText={t => updateField('fullName', t)}
+            placeholder="Enter your full name"
+            theme={theme}
+          />
+          <FieldRow
+            label="Username"
+            icon="at-outline"
+            value={personalInfo.username}
+            editable={isEditing}
+            focused={focusedField === 'username'}
+            onFocus={() => setFocusedField('username')}
+            onBlur={() => setFocusedField(null)}
+            onChangeText={t => updateField('username', t)}
+            placeholder="@username"
+            theme={theme}
+          />
+          <FieldRow
+            label="Profession"
+            icon="briefcase-outline"
+            value={personalInfo.profession}
+            editable={isEditing}
+            focused={focusedField === 'profession'}
+            onFocus={() => setFocusedField('profession')}
+            onBlur={() => setFocusedField(null)}
+            onChangeText={t => updateField('profession', t)}
+            placeholder="e.g. Software Engineer"
+            theme={theme}
+          />
+          <FieldRow
+            label="Gender"
+            icon="male-female-outline"
+            value={personalInfo.gender}
+            editable={isEditing}
+            focused={focusedField === 'gender'}
+            onFocus={() => setFocusedField('gender')}
+            onBlur={() => setFocusedField(null)}
+            onChangeText={t => updateField('gender', t)}
+            placeholder="e.g. Male / Female"
+            theme={theme}
+            isLast
+          />
+        </SectionCard>
 
-          {/* Phone Number */}
-          <View style={styles.inputContainer}>
-            <Text style={[styles.inputLabel, { color: theme.text }]}>Phone Number</Text>
-            <View style={[styles.inputWrapper, { borderColor: theme.border, backgroundColor: theme.surface }]}>
-              <Ionicons name="call-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
-              <TextInput
-                style={[styles.textInput, styles.inputWithIcon, !isEditing && styles.disabledInput, { color: theme.text, backgroundColor: theme.surface }]}
-                value={personalInfo.phone}
-                onChangeText={(text) => updateField('phone', text)}
-                editable={isEditing}
-                placeholder="Enter your phone number"
-                keyboardType="phone-pad"
-                placeholderTextColor={theme.textTertiary}
-              />
-            </View>
-          </View>
+        {/* ── Contact Section ── */}
+        <SectionCard title="Contact Details" icon="call-outline" theme={theme}>
+          <FieldRow
+            label="Email Address"
+            icon="mail-outline"
+            value={personalInfo.email}
+            editable={isEditing}
+            focused={focusedField === 'email'}
+            onFocus={() => setFocusedField('email')}
+            onBlur={() => setFocusedField(null)}
+            onChangeText={t => updateField('email', t)}
+            placeholder="your@email.com"
+            keyboardType="email-address"
+            theme={theme}
+          />
+          <FieldRow
+            label="Phone Number"
+            icon="call-outline"
+            value={personalInfo.phone}
+            editable={isEditing}
+            focused={focusedField === 'phone'}
+            onFocus={() => setFocusedField('phone')}
+            onBlur={() => setFocusedField(null)}
+            onChangeText={t => updateField('phone', t)}
+            placeholder="+1 234 567 8900"
+            keyboardType="phone-pad"
+            theme={theme}
+          />
+          <FieldRow
+            label="Address"
+            icon="location-outline"
+            value={personalInfo.address || ''}
+            editable={isEditing}
+            focused={focusedField === 'address'}
+            onFocus={() => setFocusedField('address')}
+            onBlur={() => setFocusedField(null)}
+            onChangeText={t => updateField('address', t)}
+            placeholder="Your address"
+            multiline
+            theme={theme}
+            isLast
+          />
+        </SectionCard>
 
-          {/* Gender */}
-          <View style={styles.inputContainer}>
-            <Text style={[styles.inputLabel, { color: theme.text }]}>Gender</Text>
-            <View style={[styles.inputWrapper, { borderColor: theme.border, backgroundColor: theme.surface }]}>
-              <TextInput
-                style={[styles.textInput, !isEditing && styles.disabledInput, { color: theme.text, backgroundColor: theme.surface }]}
-                value={personalInfo.gender}
-                onChangeText={(text) => updateField('gender', text)}
-                editable={isEditing}
-                placeholder="Enter your gender"
-                placeholderTextColor={theme.textTertiary}
-              />
-            </View>
-          </View>
+        {/* ── Additional Section ── */}
+        <SectionCard title="Additional Info" icon="calendar-outline" theme={theme}>
+          <FieldRow
+            label="Date of Birth"
+            icon="calendar-outline"
+            value={personalInfo.dateOfBirth || ''}
+            editable={isEditing}
+            focused={focusedField === 'dob'}
+            onFocus={() => setFocusedField('dob')}
+            onBlur={() => setFocusedField(null)}
+            onChangeText={t => updateField('dateOfBirth', t)}
+            placeholder="DD / MM / YYYY"
+            theme={theme}
+            isLast
+          />
+        </SectionCard>
 
-          {/* Profession */}
-          <View style={styles.inputContainer}>
-            <Text style={[styles.inputLabel, { color: theme.text }]}>Profession</Text>
-            <View style={[styles.inputWrapper, { borderColor: theme.border, backgroundColor: theme.surface }]}>
-              <TextInput
-                style={[styles.textInput, !isEditing && styles.disabledInput, { color: theme.text, backgroundColor: theme.surface }]}
-                value={personalInfo.profession}
-                onChangeText={(text) => updateField('profession', text)}
-                editable={isEditing}
-                placeholder="Enter your profession"
-                placeholderTextColor={theme.textTertiary}
-              />
-            </View>
-          </View>
-
-          {/* Username */}
-          <View style={styles.inputContainer}>
-            <Text style={[styles.inputLabel, { color: theme.text }]}>Username</Text>
-            <View style={[styles.inputWrapper, { borderColor: theme.border, backgroundColor: theme.surface }]}>
-              <TextInput
-                style={[styles.textInput, !isEditing && styles.disabledInput, { color: theme.text, backgroundColor: theme.surface }]}
-                value={personalInfo.username}
-                onChangeText={(text) => updateField('username', text)}
-                editable={isEditing}
-                placeholder="Enter your username"
-                placeholderTextColor={theme.textTertiary}
-              />
-            </View>
-          </View>
-        </View>
-
-        {/* Additional Information Section */}
-        <View style={[styles.section, { backgroundColor: theme.card, borderColor: theme.border }]}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Additional Information</Text>
-          
-          {/* Address */}
-          <View style={styles.inputContainer}>
-            <Text style={[styles.inputLabel, { color: theme.text }]}>Address</Text>
-            <View style={[styles.inputWrapper, { borderColor: theme.border, backgroundColor: theme.surface }]}>
-              <Ionicons name="location-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
-              <TextInput
-                style={[styles.textInput, styles.inputWithIcon, !isEditing && styles.disabledInput, { color: theme.text, backgroundColor: theme.surface }]}
-                value={personalInfo.address}
-                onChangeText={(text) => updateField('address', text)}
-                editable={isEditing}
-                placeholder="Enter your address"
-                multiline
-                numberOfLines={2}
-                placeholderTextColor={theme.textTertiary}
-              />
-            </View>
-          </View>
-
-          {/* Date of Birth */}
-          <View style={styles.inputContainer}>
-            <Text style={[styles.inputLabel, { color: theme.text }]}>Date of Birth</Text>
-            <View style={[styles.inputWrapper, { borderColor: theme.border, backgroundColor: theme.surface }]}>
-              <Ionicons name="calendar-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
-              <TextInput
-                style={[styles.textInput, styles.inputWithIcon, !isEditing && styles.disabledInput, { color: theme.text, backgroundColor: theme.surface }]}
-                value={personalInfo.dateOfBirth}
-                onChangeText={(text) => updateField('dateOfBirth', text)}
-                editable={isEditing}
-                placeholder="DD/MM/YYYY"
-                placeholderTextColor={theme.textTertiary}
-              />
-            </View>
-          </View>
-        </View>
-
-        {/* Action Buttons */}
+        {/* ── Save Button ── */}
         {isEditing && (
-          <View style={styles.actionButtons}>
-            <TouchableOpacity 
-              style={[styles.cancelButton, { backgroundColor: theme.surface, borderColor: theme.border }]} 
-              onPress={handleCancel}
-            >
-              <Text style={[styles.cancelButtonText, { color: theme.text }]}>Cancel</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.saveButton, { backgroundColor: theme.primary }]} 
+          <View style={styles.saveBtnWrap}>
+            <TouchableOpacity
+              style={[styles.saveBtn, { backgroundColor: theme.primary }]}
               onPress={handleSave}
               disabled={saving}
+              activeOpacity={0.85}
             >
               {saving ? (
-                <ActivityIndicator size="small" color={theme.textInverse} />
+                <ActivityIndicator size="small" color="#fff" />
               ) : (
-                <Text style={[styles.saveButtonText, { color: theme.textInverse }]}>Save Changes</Text>
+                <>
+                  <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                  <Text style={styles.saveBtnText}>Save Changes</Text>
+                </>
               )}
             </TouchableOpacity>
           </View>
@@ -621,313 +421,297 @@ export default function PersonalInformation() {
   );
 }
 
+/* ─────────────────────────── Sub-components ─────────────────────────── */
+
+function SectionCard({ title, icon, children, theme }: {
+  title: string;
+  icon: string;
+  children: React.ReactNode;
+  theme: any;
+}) {
+  return (
+    <View style={[styles.sectionCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+      <View style={styles.sectionHeader}>
+        <View style={[styles.sectionIconWrap, { backgroundColor: theme.primary + '18' }]}>
+          <Ionicons name={icon as any} size={16} color={theme.primary} />
+        </View>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>{title}</Text>
+      </View>
+      {children}
+    </View>
+  );
+}
+
+function FieldRow({
+  label, icon, value, editable, focused, onFocus, onBlur,
+  onChangeText, placeholder, keyboardType, multiline, theme, isLast,
+}: {
+  label: string;
+  icon: string;
+  value: string;
+  editable: boolean;
+  focused: boolean;
+  onFocus: () => void;
+  onBlur: () => void;
+  onChangeText: (t: string) => void;
+  placeholder: string;
+  keyboardType?: any;
+  multiline?: boolean;
+  theme: any;
+  isLast?: boolean;
+}) {
+  const borderColor = focused ? theme.primary : 'transparent';
+
+  return (
+    <View style={[styles.fieldRow, !isLast && { borderBottomWidth: 1, borderBottomColor: theme.borderLight }]}>
+      <View style={styles.fieldLabelRow}>
+        <Ionicons name={icon as any} size={14} color={theme.textTertiary} style={{ marginRight: 5 }} />
+        <Text style={[styles.fieldLabel, { color: theme.textTertiary }]}>{label}</Text>
+      </View>
+      {editable ? (
+        <View style={[styles.fieldInputWrap, { borderColor, backgroundColor: theme.surface }]}>
+          <TextInput
+            style={[styles.fieldInput, { color: theme.text }]}
+            value={value}
+            onChangeText={onChangeText}
+            onFocus={onFocus}
+            onBlur={onBlur}
+            placeholder={placeholder}
+            placeholderTextColor={theme.textTertiary}
+            keyboardType={keyboardType}
+            multiline={multiline}
+            numberOfLines={multiline ? 2 : 1}
+          />
+        </View>
+      ) : (
+        <Text style={[styles.fieldValue, { color: value ? theme.text : theme.textTertiary }]}>
+          {value || placeholder}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+/* ─────────────────────────── Styles ─────────────────────────── */
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8F9FB',
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#101828',
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#666',
-  },
-  section: {
-    backgroundColor: '#fff',
-    marginHorizontal: 20,
-    marginTop: 20,
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  profilePhotoContainer: {
-    flexDirection: 'row',
+  /* Hero */
+  hero: {
     alignItems: 'center',
+    paddingTop: 40,
+    paddingBottom: 36,
+    paddingHorizontal: 24,
   },
-  profilePhotoWrapper: {
+  avatarWrap: {
     position: 'relative',
-    marginRight: 20,
+    marginBottom: 14,
   },
-  profileImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  avatar: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.6)',
   },
-  profilePlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#667eea',
+  avatarFallback: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  profileInitials: {
+  avatarInitials: {
     fontSize: 32,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: '#fff',
+    letterSpacing: 1,
   },
-  cameraIcon: {
+  cameraChip: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#4FC3F7',
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    bottom: 2,
+    right: 2,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(0,0,0,0.55)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: 'rgba(255,255,255,0.4)',
   },
-  profilePhotoInfo: {
-    flex: 1,
+  heroName: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 0.3,
+    textAlign: 'center',
   },
-  profilePhotoTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#101828',
-    marginBottom: 4,
-  },
-  profilePhotoSubtitle: {
+  heroEmail: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 12,
+    color: 'rgba(255,255,255,0.75)',
+    marginTop: 3,
+    textAlign: 'center',
   },
-  changePhotoButton: {
-    backgroundColor: '#fff',
+  professionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 10,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  professionBadgeText: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '500',
+  },
+  editToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 18,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    paddingHorizontal: 18,
+    paddingVertical: 9,
+    borderRadius: 22,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    alignSelf: 'flex-start',
+    borderColor: 'rgba(255,255,255,0.3)',
   },
-  changePhotoText: {
-    color: '#101828',
+  editToggleActive: {
+    backgroundColor: 'rgba(244,67,54,0.12)',
+    borderColor: 'rgba(244,67,54,0.4)',
+  },
+  editToggleText: {
     fontSize: 14,
-    fontWeight: '500',
-  },
-  sectionTitle: {
-    fontSize: 18,
     fontWeight: '600',
-    color: '#101828',
-    marginBottom: 20,
+    color: '#fff',
   },
-  inputContainer: {
-    marginBottom: 20,
+
+  /* Completion bar */
+  completionCard: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 16,
   },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#101828',
+  completionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 8,
   },
-  inputWrapper: {
+  completionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  completionPct: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  completionTrack: {
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  completionFill: {
+    height: 6,
+    borderRadius: 3,
+  },
+  completionHint: {
+    fontSize: 12,
+    marginTop: 8,
+  },
+
+  /* Section card */
+  sectionCard: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 10,
+  },
+  sectionIconWrap: {
+    width: 28,
+    height: 28,
     borderRadius: 8,
-    paddingHorizontal: 12,
-  },
-  inputIcon: {
-    marginRight: 8,
-  },
-  textInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#101828',
-    paddingVertical: 12,
-  },
-  inputWithIcon: {
-    paddingLeft: 0,
-  },
-  disabledInput: {
-    color: '#666',
-    backgroundColor: '#F5F5F5',
-  },
-  datePickerIcon: {
-    padding: 4,
-  },
-  buttonContainer: {
-    paddingHorizontal: 20,
-    marginTop: 30,
-  },
-  editButton: {
-    backgroundColor: '#101828',
-    borderRadius: 50,
-    padding: 10,
-    alignItems: 'center',
-  },
-  editButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  cancelButton: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    color: '#101828',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  saveButton: {
-    flex: 1,
-    backgroundColor: '#101828',
-    borderRadius: 8,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-  },
-  // Empty state styles
-  emptyStateContainer: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-  },
-  emptyStateAvatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#f0f9ff',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
-    borderWidth: 3,
-    borderColor: '#4caf50',
-    borderStyle: 'dashed',
   },
-  emptyStateTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#101828',
-    marginBottom: 12,
-    textAlign: 'center',
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+    textTransform: 'uppercase',
   },
-  emptyStateMessage: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 32,
-    paddingHorizontal: 20,
+
+  /* Field row */
+  fieldRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
-  emptyStateButton: {
-    backgroundColor: '#4caf50',
-    borderRadius: 12,
+  fieldLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  fieldLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  fieldValue: {
+    fontSize: 15,
+    fontWeight: '500',
+    lineHeight: 22,
+  },
+  fieldInputWrap: {
+    borderWidth: 1.5,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 2,
+  },
+  fieldInput: {
+    fontSize: 15,
+    fontWeight: '500',
+    paddingVertical: 8,
+    minHeight: 38,
+  },
+
+  /* Save button */
+  saveBtnWrap: {
+    marginHorizontal: 16,
+    marginTop: 24,
+  },
+  saveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
     paddingVertical: 16,
-    paddingHorizontal: 32,
-    shadowColor: '#4caf50',
+    borderRadius: 14,
+    shadowColor: '#4CAF50',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.35,
     shadowRadius: 8,
     elevation: 5,
   },
-  emptyStateButtonText: {
-    color: '#fff',
+  saveBtnText: {
     fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  actionButtonsContainer: {
-    marginTop: 20,
-  },
-  profileHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-   margin:20,
-   padding:10,
-   borderRadius:12,
-    paddingHorizontal: 20,
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginRight: 15,
-  },
-  avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-  },
-  avatarPlaceholder: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#667eea',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: '#fff',
   },
-  editAvatarButton: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#4FC3F7',
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
-  profileInfo: {
-    flex: 1,
-  },
-  profileName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#101828',
-    marginBottom: 4,
-  },
-  profileEmail: {
-    fontSize: 14,
-    color: '#666',
-  },
-}); 
+});

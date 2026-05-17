@@ -133,8 +133,6 @@ class NotificationServiceImpl {
   // Request notification permissions
   async requestPermissions(): Promise<boolean> {
     try {
-      console.log('Requesting notification permissions...');
-      
       if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('default', {
           name: 'default',
@@ -147,18 +145,16 @@ class NotificationServiceImpl {
 
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
-      
+
       if (existingStatus !== 'granted') {
         const { status } = await Notifications.requestPermissionsAsync();
         finalStatus = status;
       }
-      
+
       if (finalStatus !== 'granted') {
-        console.log('Notification permissions not granted');
         return false;
       }
-      
-      console.log('Notification permissions granted');
+
       return true;
     } catch (error) {
       console.error('Error requesting notification permissions:', error);
@@ -169,25 +165,20 @@ class NotificationServiceImpl {
   // Get push notification token
   async getPushToken(): Promise<string | null> {
     try {
-      console.log('Getting push notification token...');
-      
       if (!Device.isDevice) {
-        console.log('Must use physical device for push notifications');
         return null;
       }
 
       // Check if Firebase messaging is available
       const messagingInstance = await messaging;
       if (!messagingInstance) {
-        console.log('Firebase messaging not available on this platform');
         return null;
       }
 
       const token = await Notifications.getExpoPushTokenAsync({
         projectId: 'e9b9481b-8889-42b9-a96f-87f0961cbe8d', // Your EAS project ID
       });
-      
-      console.log('Push token received:', token.data);
+
       return token.data;
     } catch (error) {
       console.error('Error getting push token:', error);
@@ -199,8 +190,6 @@ class NotificationServiceImpl {
   // Save notification token to Firestore
   async saveTokenToFirestore(userId: string, token: string): Promise<boolean> {
     try {
-      console.log('Saving notification token to Firestore...');
-      
       const tokenData: NotificationToken = {
         token,
         platform: Platform.OS as 'ios' | 'android' | 'web',
@@ -209,7 +198,6 @@ class NotificationServiceImpl {
       };
 
       await setDoc(doc(db, 'notificationTokens', userId), tokenData);
-      console.log('Notification token saved to Firestore');
       return true;
     } catch (error) {
       console.error('Error saving notification token:', error);
@@ -237,12 +225,9 @@ class NotificationServiceImpl {
       // Check if notifications are enabled by user
       const isEnabled = await this.isPushEnabled();
       if (!isEnabled) {
-        console.log('Notifications disabled by user, skipping local notification');
         return null;
       }
 
-      console.log('Sending local notification:', { title, body });
-      
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
           title,
@@ -252,12 +237,10 @@ class NotificationServiceImpl {
         },
         trigger: null, // Send immediately
       });
-      
-      console.log('Local notification sent with ID:', notificationId);
-      
+
       // Also save to Firestore for notification screen
       await this.saveNotificationToFirestore(title, body, data);
-      
+
       return notificationId;
     } catch (error) {
       console.error('Error sending local notification:', error);
@@ -271,12 +254,9 @@ class NotificationServiceImpl {
       // Get current user
       const currentUser = auth.currentUser;
       if (!currentUser) {
-        console.log('No authenticated user, skipping Firestore save');
         return;
       }
 
-      console.log('Saving notification to Firestore:', { title, body });
-      
       const notificationData = {
         title,
         body,
@@ -288,7 +268,6 @@ class NotificationServiceImpl {
       };
 
       await addDoc(collection(db, 'notifications'), notificationData);
-      console.log('Notification saved to Firestore');
     } catch (error) {
       console.error('Error saving notification to Firestore:', error);
     }
@@ -305,12 +284,9 @@ class NotificationServiceImpl {
       // Check if notifications are enabled by user
       const isEnabled = await this.isPushEnabled();
       if (!isEnabled) {
-        console.log('Notifications disabled by user, skipping scheduled notification');
         return null;
       }
 
-      console.log('Scheduling notification:', { title, body, trigger });
-      
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
           title,
@@ -320,8 +296,7 @@ class NotificationServiceImpl {
         },
         trigger,
       });
-      
-      console.log('Notification scheduled with ID:', notificationId);
+
       return notificationId;
     } catch (error) {
       console.error('Error scheduling notification:', error);
@@ -333,7 +308,6 @@ class NotificationServiceImpl {
   async cancelNotification(notificationId: string): Promise<boolean> {
     try {
       await Notifications.cancelScheduledNotificationAsync(notificationId);
-      console.log('Notification cancelled:', notificationId);
       return true;
     } catch (error) {
       console.error('Error cancelling notification:', error);
@@ -345,7 +319,6 @@ class NotificationServiceImpl {
   async cancelAllNotifications(): Promise<boolean> {
     try {
       await Notifications.cancelAllScheduledNotificationsAsync();
-      console.log('All notifications cancelled');
       return true;
     } catch (error) {
       console.error('Error cancelling all notifications:', error);
@@ -357,7 +330,6 @@ class NotificationServiceImpl {
   async getScheduledNotifications(): Promise<Notifications.NotificationRequest[]> {
     try {
       const notifications = await Notifications.getAllScheduledNotificationsAsync();
-      console.log('Scheduled notifications:', notifications.length);
       return notifications;
     } catch (error) {
       console.error('Error getting scheduled notifications:', error);
@@ -368,29 +340,20 @@ class NotificationServiceImpl {
   // Initialize notifications for a user
   async initializeForUser(userId: string): Promise<boolean> {
     try {
-      console.log('Initializing notifications for user:', userId);
-      
       // Request permissions
       const hasPermission = await this.requestPermissions();
       if (!hasPermission) {
-        console.log('No notification permissions');
         return false;
       }
 
       // Get push token (this may fail in development builds, which is okay)
       const token = await this.getPushToken();
-      if (!token) {
-        console.log('No push token received (this is normal in development builds)');
-        // Don't return false here, as local notifications can still work
-      } else {
+      if (!token) {} else {
         // Save token to Firestore only if we got one
         const saved = await this.saveTokenToFirestore(userId, token);
-        if (!saved) {
-          console.log('Failed to save token to Firestore');
-        }
+        if (!saved) {}
       }
 
-      console.log('Notifications initialized successfully for user:', userId);
       return true;
     } catch (error) {
       console.error('Error initializing notifications:', error);

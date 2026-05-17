@@ -12,8 +12,11 @@ import { getDoc, doc } from 'firebase/firestore';
 import ThemeToggle from '../components/ThemeToggle';
 import { db } from '../firebaseConfig';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ProfileScreenSkeleton } from '../components/skeleton';
+import { navigateToLogin } from '../utils/navigation';
 
 export default function Profile() {
+  const [profileLoading, setProfileLoading] = useState(true);
   const [pushEnabled, setPushEnabled] = useState(true);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
@@ -27,8 +30,11 @@ export default function Profile() {
   // Fetch user profile from Firestore
   useEffect(() => {
     const fetchUserProfile = async () => {
-      if (!authUser?.uid) return;
-      
+      if (!authUser?.uid) {
+        setProfileLoading(false);
+        return;
+      }
+
       try {
         const userDoc = await getDoc(doc(db, 'users', authUser.uid));
         if (userDoc.exists()) {
@@ -41,6 +47,8 @@ export default function Profile() {
         }
       } catch (error) {
         console.error('Error fetching user profile:', error);
+      } finally {
+        setProfileLoading(false);
       }
     };
 
@@ -114,7 +122,7 @@ export default function Profile() {
             try {
               const result = await authService.signOut();
               if (result.success) {
-                router.replace('/auth/login');
+                navigateToLogin();
               } else {
                 Alert.alert('Error', result.error?.message || 'Failed to sign out. Please try again.');
               }
@@ -271,6 +279,10 @@ export default function Profile() {
       fontWeight: 'bold',
     },
   });
+
+  if (profileLoading) {
+    return <ProfileScreenSkeleton />;
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top','left','right']}>

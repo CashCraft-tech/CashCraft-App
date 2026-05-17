@@ -59,7 +59,7 @@ export default function OTPVerification() {
           [
             {
               text: 'OK',
-              onPress: () => router.push('/auth/login')
+              onPress: () => router.replace('/auth/login')
             }
           ]
         );

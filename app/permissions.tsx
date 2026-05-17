@@ -15,6 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { notificationService } from './services/notificationService';
 import { useTheme } from './context/ThemeContext';
 import { useAuth } from './context/AuthContext';
+import { navigateToAppHome } from './utils/navigation';
 
 interface Permission {
   id: string;
@@ -128,10 +129,10 @@ export default function PermissionsScreen() {
       await AsyncStorage.setItem(permissionsKey, 'true');
       
       // Navigate to main app
-      router.replace('/(tabs)/home');
+      navigateToAppHome();
     } catch (error) {
       console.error('Error saving permissions state:', error);
-      router.replace('/(tabs)/home');
+      navigateToAppHome();
     }
   };
 
@@ -142,10 +143,10 @@ export default function PermissionsScreen() {
       await AsyncStorage.setItem(permissionsKey, 'true');
       
       // Navigate to main app
-      router.replace('/(tabs)/home');
+      navigateToAppHome();
     } catch (error) {
       console.error('Error saving permissions state:', error);
-      router.replace('/(tabs)/home');
+      navigateToAppHome();
     }
   };
 

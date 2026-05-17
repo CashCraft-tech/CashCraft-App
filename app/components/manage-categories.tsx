@@ -9,6 +9,7 @@ import { categoriesService, Category } from '../services/categoriesService';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { notificationService } from '../services/notificationService';
+import { CategoriesScreenSkeleton } from './skeleton';
 
 const ICONS = [
   'cart', 'car', 'home', 'utensils', 'gamepad', 'plane', 'gift', 'heart', 'credit-card', 'shopping-bag', 'bolt', 'dollar-sign', 'music', 'film', 'book', 'medkit', 'paw', 'tshirt', 'mobile-alt', 'glass-cheers',
@@ -77,6 +78,7 @@ export default function ManageCategories() {
   const [selectedColor, setSelectedColor] = useState(COLORS[0]);
   const [categoryName, setCategoryName] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // For editing
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -92,7 +94,11 @@ export default function ManageCategories() {
       } catch (error) {
         console.error('Error fetching categories:', error);
         Alert.alert('Error', 'Failed to load categories');
+      } finally {
+        setLoading(false);
       }
+    } else {
+      setLoading(false);
     }
   };
 
@@ -234,6 +240,10 @@ export default function ManageCategories() {
   const [pickerTab, setPickerTab] = useState<'Icons' | 'Colors'>('Icons');
 
   const canCreate = addName.trim() && addIcon && addColor;
+
+  if (loading) {
+    return <CategoriesScreenSkeleton />;
+  }
 
   return (
     <KeyboardAwareScrollView

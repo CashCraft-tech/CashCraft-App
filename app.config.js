@@ -2,61 +2,70 @@
 // If GOOGLE_SERVICES_JSON is set by EAS (file secret), use that path.
 // Otherwise fall back to the local file for development.
 
+const fs = require('fs');
+const path = require('path');
+
+const googleServicesPath =
+  process.env.GOOGLE_SERVICES_JSON || './google-services.json';
+const googleServicesResolved = path.resolve(__dirname, googleServicesPath);
+const hasGoogleServices = fs.existsSync(googleServicesResolved);
+
 module.exports = () => ({
   expo: {
-    name: "CashCraft",
-    slug: "bachat",
-    version: "1.0.0",
-    orientation: "portrait",
-    scheme: "cashcraft",
-    userInterfaceStyle: "light",
+    name: 'CashCraft',
+    slug: 'bachat',
+    version: '1.0.0',
+    orientation: 'portrait',
+    scheme: 'cashcraft',
+    userInterfaceStyle: 'light',
     newArchEnabled: true,
     androidStatusBar: {
-      backgroundColor: "#004F3A",
+      backgroundColor: '#004F3A',
     },
     androidNavigationBar: {
-      visible: "immersive",
-      backgroundColor: "#FFFFFF",
-      barStyle: "dark-content",
+      visible: 'immersive',
+      backgroundColor: '#FFFFFF',
+      barStyle: 'dark-content',
     },
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.cashcraft.app",
+      bundleIdentifier: 'com.cashcraft.app',
     },
     android: {
-      package: "com.cashcraft.com",
-      googleServicesFile: process.env.GOOGLE_SERVICES_JSON || "./google-services.json",
+      package: 'com.cashcraft.com',
+      ...(hasGoogleServices && { googleServicesFile: googleServicesPath }),
       versionCode: 1,
       adaptiveIcon: {
-        foregroundImage: "./assets/images/adaptive-icon.png",
-        backgroundColor: "#004F3A",
+        foregroundImage: './assets/images/adaptive-icon.png',
+        backgroundColor: '#004F3A',
       },
       edgeToEdgeEnabled: false,
-      softwareKeyboardLayoutMode: "pan",
+      softwareKeyboardLayoutMode: 'pan',
     },
     web: {
-      bundler: "metro",
-      output: "static",
-      favicon: "./assets/images/favicon.png",
+      bundler: 'metro',
+      output: 'static',
+      favicon: './assets/images/favicon.png',
     },
     plugins: [
-      "expo-router",
+      'expo-router',
+      'expo-dev-client',
       [
-        "expo-splash-screen",
+        'expo-splash-screen',
         {
-          image: "./assets/images/splash-icon.png",
-          resizeMode: "contain",
-          backgroundColor: "#004F3A",
+          image: './assets/images/splash-icon.png',
+          resizeMode: 'contain',
+          backgroundColor: '#004F3A',
         },
       ],
       [
-        "expo-notifications",
+        'expo-notifications',
         {
-          icon: "./assets/images/notification-icon.png",
-          color: "#4caf50",
+          icon: './assets/images/notification-icon.png',
+          color: '#4caf50',
         },
       ],
-      "expo-navigation-bar",
+      'expo-navigation-bar',
     ],
     experiments: {
       typedRoutes: true,
@@ -64,14 +73,9 @@ module.exports = () => ({
     extra: {
       router: {},
       eas: {
-        projectId: "e9b9481b-8889-42b9-a96f-87f0961cbe8d",
+        projectId: 'e9b9481b-8889-42b9-a96f-87f0961cbe8d',
       },
     },
-    owner: "prasad19",
+    owner: 'prasad19',
   },
 });
-
-
-
-
-

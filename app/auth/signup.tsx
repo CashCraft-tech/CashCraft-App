@@ -5,6 +5,7 @@ import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { authService } from "../services/authService";
 import { categoriesService } from '../services/categoriesService';
+import { navigateToAppHome } from '../utils/navigation';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -71,15 +72,12 @@ export default function Signup() {
     
     setLoading(true);
     try {
-      console.log('Attempting to create account for:', form.email);
-      
       // Create user with Firebase Auth
       const result = await authService.signUp(form.email, form.password);
-      
+
       if (result.success && result.user) {
         const user = result.user;
-        console.log('User created successfully:', user.uid);
-        
+
         // Save user profile to Firestore
         const userProfile = {
           uid: user.uid,
@@ -92,16 +90,14 @@ export default function Signup() {
           createdAt: new Date(),
           updatedAt: new Date()
         };
-        
+
         await setDoc(doc(db, 'users', user.uid), userProfile);
-        console.log('User profile saved to Firestore');
-        
+
         // Create default categories for the new user
         await categoriesService.createDefaultCategories(user.uid);
-        console.log('Default categories created');
-        
+
         setSuccess("Account created successfully!");
-        setTimeout(() => router.push("/auth/login"), 2000);
+        setTimeout(() => navigateToAppHome(), 800);
       } else {
         setError(result.error?.message || 'Signup failed. Please try again.');
       }
@@ -264,7 +260,7 @@ export default function Signup() {
           
           <View style={styles.loginContainer}>
             <Text style={styles.loginPrompt}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => router.push("/auth/login")}> 
+            <TouchableOpacity onPress={() => router.replace("/auth/login")}> 
               <Text style={styles.loginText}>Sign In</Text>
             </TouchableOpacity>
           </View>

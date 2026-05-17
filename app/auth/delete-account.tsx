@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { authService } from "../services/authService";
+import { navigateToLogin } from "../utils/navigation";
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -48,7 +49,7 @@ export default function DeleteAccount() {
                        text: 'OK',
                                                onPress: () => {
                           // Navigate to login and clear navigation stack
-                          router.replace('/auth/login');
+                          navigateToLogin();
                         },
                      },
                    ]

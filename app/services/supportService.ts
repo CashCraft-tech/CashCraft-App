@@ -135,14 +135,12 @@ export const helpCenterService = {
         id: doc.id,
         ...doc.data()
       })) as HelpArticle[];
-      
+
       // If Firestore has articles, return them
       if (firestoreArticles.length > 0) {
         return firestoreArticles;
       }
-      
-      // Otherwise, return default articles
-      console.log('No Firestore articles found, using default articles');
+
       return DEFAULT_HELP_ARTICLES;
     } catch (error) {
       console.error('Error fetching help articles from Firestore, using defaults:', error);

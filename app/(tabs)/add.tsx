@@ -125,13 +125,10 @@ export default function Add() {
       if (!user?.uid) return;
       
       try {
-        console.log('Fetching categories for user:', user.uid);
         const userCategories = await categoriesService.getUserCategories(user.uid);
-        console.log('All user categories:', userCategories);
-        
+
         // Don't filter by type - show all categories for both income and expense
         setCategories(userCategories);
-        console.log('Categories state set to:', userCategories.length, 'categories');
       } catch (error) {
         console.error('Error fetching categories:', error);
         Alert.alert('Error', 'Failed to load categories');
@@ -199,8 +196,6 @@ export default function Add() {
       const [hh, mm_time] = time.split(':');
       const transactionDate = new Date(parseInt(yyyy), parseInt(mm) - 1, parseInt(dd), parseInt(hh), parseInt(mm_time), 0, 0);
 
-      console.log('Creating transaction with date:', transactionDate.toISOString());
-
       const transaction = {
         userId: user.uid,
         categoryId: selectedCategory.id!,
@@ -219,7 +214,7 @@ export default function Add() {
       await transactionsService.addTransaction(transaction);
       // No notification for transaction added - only low balance alerts
       Alert.alert('Success', 'Transaction added successfully!');
-      
+
       // Reset form but keep current date and time
       setAmount('');
       setTitle('');
@@ -229,7 +224,6 @@ export default function Add() {
       setPaymentType(null);
       setSelectedCategory(null);
       setCategory(null);
-      
     } catch (error) {
       console.error('Error saving transaction:', error);
       Alert.alert('Error', 'Failed to save transaction');

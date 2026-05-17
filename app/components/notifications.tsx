@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { StatusBar } from 'expo-status-bar';
 import NoNotificationsIcon from './NoNotificationsIcon';
+import { SkeletonRow } from './skeleton';
 
 interface Notification {
   id: string;
@@ -37,7 +38,6 @@ const NotificationScreen = () => {
       const querySnapshot = await getDocs(q);
       const notifs = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() })) as Notification[];
       setNotifications(notifs);
-      console.log('Fetched notifications:', notifs.length);
     } catch (e) {
       console.error('Error fetching notifications:', e);
     }
@@ -128,8 +128,10 @@ const NotificationScreen = () => {
         )}
       </View>
       {loading ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ color: theme.textSecondary }}>Loading...</Text>
+        <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 12 }}>
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <SkeletonRow key={i} style={i > 0 ? { marginTop: 16 } : undefined} />
+          ))}
         </View>
       ) : notifications.length === 0 ? (
         <View style={styles.emptyContainer}>

@@ -43,7 +43,7 @@ export default function ResetPassword() {
           [
             {
               text: 'OK',
-              onPress: () => router.push("/auth/login")
+              onPress: () => router.replace("/auth/login")
             }
           ]
         );
@@ -160,7 +160,7 @@ export default function ResetPassword() {
 
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => router.push("/auth/login")}
+          onPress={() => router.replace("/auth/login")}
         >
           <Text style={styles.backButtonText}>Back to Login</Text>
         </TouchableOpacity>

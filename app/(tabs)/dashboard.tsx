@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from "react-native";
+import { DashboardScreenSkeleton } from '../components/skeleton';
 import { router, useFocusEffect } from 'expo-router';
 import { MaterialIcons, Ionicons, Feather, FontAwesome5 } from '@expo/vector-icons';
 import { Svg, G, Circle } from 'react-native-svg';
@@ -196,7 +197,6 @@ export default function Dashboard() {
   // Refresh when tab comes into focus (when user navigates to this tab)
   useFocusEffect(
     React.useCallback(() => {
-      console.log('Dashboard tab focused - refreshing data');
       if (user?.uid) {
         fetchData();
       }
@@ -585,14 +585,7 @@ export default function Dashboard() {
   });
 
   if (loading) {
-    return (
-      <SafeAreaView style={styles.container} edges={['top','left','right']}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={{ marginTop: 16, color: theme.textSecondary }}>Loading your data...</Text>
-        </View>
-      </SafeAreaView>
-    );
+    return <DashboardScreenSkeleton />;
   }
 
   const totalSpent: number = categories.reduce((sum: number, c: Category) => sum + c.value, 0);

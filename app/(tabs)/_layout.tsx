@@ -1,26 +1,13 @@
 import { View } from 'react-native';
-import { Tabs, Redirect } from "expo-router";
+import { Tabs } from "expo-router";
 import { Ionicons, MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
 import { Platform } from "react-native";
 import NotificationScreen from '../components/notifications';
 import { useTheme } from '../context/ThemeContext';
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useAuth } from '../context/AuthContext';
-
 export default function RootLayout() 
 {
   const { theme } = useTheme();
-  const { user, loading } = useAuth();
-  
-  // Show loading screen while checking authentication
-  if (loading) {
-    return null;
-  }
-
-  // Redirect to login if not authenticated
-  if (!user) {
-    return <Redirect href="/auth/login" />;
-  }
   
   const Container = SafeAreaView;
   const containerProps = { edges: ['bottom' as const] };

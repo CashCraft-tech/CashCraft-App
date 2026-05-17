@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Modal, Dimensions, ActivityIndicator, RefreshControl, Alert } from "react-native";
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
+import { FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
+import * as FileSystem from 'expo-file-system';
 import { router, useFocusEffect } from 'expo-router';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
-import { transactionsService, Transaction } from '../services/transactionsService';
+import React, { useEffect, useState } from "react";
+import { Alert, Dimensions, FlatList, Modal, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { TransactionsScreenSkeleton } from '../components/skeleton';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { formatDateShort } from '../utils/dateUtils';
 import { notificationService } from '../services/notificationService';
+import { Transaction, transactionsService } from '../services/transactionsService';
+import { formatDateShort } from '../utils/dateUtils';
 
 // Get screen dimensions
 const { height: screenHeight } = Dimensions.get('window');
@@ -37,8 +38,8 @@ export default function Transactions() {
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('newest');
-  const [filterType, setFilterType] = useState<string|null>(null);
-  const [filterCategory, setFilterCategory] = useState<string|null>(null);
+  const [filterType, setFilterType] = useState<string | null>(null);
+  const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [showSort, setShowSort] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
   const [showDownload, setShowDownload] = useState(false);
@@ -46,7 +47,7 @@ export default function Transactions() {
   // Fetch transactions from Firebase
   const fetchTransactions = async () => {
     if (!user?.uid) return;
-    
+
     try {
       setLoading(true);
       const userTransactions = await transactionsService.getUserTransactions(user.uid, 1000); // Get all transactions
@@ -66,7 +67,6 @@ export default function Transactions() {
   // Refresh when tab comes into focus (when user navigates to this tab)
   useFocusEffect(
     React.useCallback(() => {
-      console.log('Transactions tab focused - refreshing data');
       fetchTransactions();
     }, [user])
   );
@@ -98,13 +98,13 @@ export default function Transactions() {
           onPress: async () => {
             try {
               await transactionsService.deleteTransaction(transaction.id!);
-              
+
               // Remove from local state
               setTransactions(prev => prev.filter(tx => tx.id !== transaction.id));
-              
+
               // Show success notification
               Alert.alert('Success', 'Transaction deleted successfully');
-              
+
               // Send notification
               await notificationService.sendLocalNotification(
                 'Transaction Deleted',
@@ -144,7 +144,7 @@ export default function Transactions() {
       'tshirt': <FontAwesome5 name="tshirt" size={size} color={color} />,
       'mobile-alt': <FontAwesome5 name="mobile-alt" size={size} color={color} />,
       'glass-cheers': <FontAwesome5 name="glass-cheers" size={size} color={color} />,
-      
+
       // MaterialIcons and Ionicons (legacy support)
       'restaurant': <MaterialIcons name="restaurant" size={size} color={color} />,
       'car-sport': <Ionicons name="car-sport" size={size} color={color} />,
@@ -185,7 +185,7 @@ export default function Transactions() {
 
   const generateCSV = (transactions: Transaction[]) => {
     const headers = 'Date,Description,Category,Type,Amount\n';
-    const rows = transactions.map(tx => 
+    const rows = transactions.map(tx =>
       `${formatDateShort(tx.date)},${tx.description},${tx.categoryName || 'Unknown'},${tx.type},${tx.amount}`
     ).join('\n');
     return headers + rows;
@@ -193,7 +193,7 @@ export default function Transactions() {
 
   const generatePDF = (transactions: Transaction[]) => {
     const headers = 'Date\tDescription\tCategory\tType\tAmount\n';
-    const rows = transactions.map(tx => 
+    const rows = transactions.map(tx =>
       `${formatDateShort(tx.date)}\t${tx.description}\t${tx.categoryName || 'Unknown'}\t${tx.type}\t${tx.amount}`
     ).join('\n');
     return headers + rows;
@@ -204,10 +204,10 @@ export default function Transactions() {
     const header = '┌──────────────┬──────────────────────┬──────────────┬──────────┬──────────┐\n';
     const separator = '├──────────────┼──────────────────────┼──────────────┼──────────┼──────────┤\n';
     const footer = '└──────────────┴──────────────────────┴──────────────┴──────────┴──────────┘\n';
-    
+
     // Header row
     const headerRow = '│ Date          │ Description           │ Category      │ Type     │ Amount   │\n';
-    
+
     // Data rows
     const dataRows = transactions.map(tx => {
       const date = formatDateShort(tx.date).padEnd(14);
@@ -215,21 +215,21 @@ export default function Transactions() {
       const category = (tx.categoryName || 'Unknown').substring(0, 12).padEnd(12);
       const type = tx.type.padEnd(8);
       const amount = `₹${tx.amount}`.padEnd(8);
-      
+
       return `│ ${date} │ ${description} │ ${category} │ ${type} │ ${amount} │`;
     }).join('\n');
-    
+
     // Summary
     const totalIncome = transactions.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0);
     const totalExpense = transactions.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0);
     const balance = totalIncome - totalExpense;
-    
+
     const summary = `\n\nSUMMARY:\n`;
     const summaryRow1 = `Total Income:  ₹${totalIncome.toLocaleString()}\n`;
     const summaryRow2 = `Total Expense: ₹${totalExpense.toLocaleString()}\n`;
     const summaryRow3 = `Balance:       ₹${balance.toLocaleString()}\n`;
     const summaryRow4 = `Transactions:  ${transactions.length}\n`;
-    
+
     return header + headerRow + separator + dataRows + '\n' + footer + summary + summaryRow1 + summaryRow2 + summaryRow3 + summaryRow4;
   };
 
@@ -238,19 +238,19 @@ export default function Transactions() {
     const totalIncome = transactions.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0);
     const totalExpense = transactions.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0);
     const balance = totalIncome - totalExpense;
-    
+
     // Get active filters
     const activeFilters = [];
     if (filterType) activeFilters.push(`Type: ${filterType}`);
     if (filterCategory) activeFilters.push(`Category: ${filterCategory}`);
     if (search) activeFilters.push(`Search: "${search}"`);
     if (sort !== 'newest') activeFilters.push(`Sort: ${SORT_OPTIONS.find(opt => opt.value === sort)?.label || sort}`);
-    
+
     const filterText = activeFilters.length > 0 ? activeFilters.join(' • ') : 'All transactions';
-    
+
     // Show all transactions when no filters, or filtered transactions
     const transactionsToShow = filteredTransactions;
-    
+
     const htmlContent = `
       <!DOCTYPE html>
       <html>
@@ -436,17 +436,17 @@ export default function Transactions() {
           </div>
           
           <div class="footer">
-            Generated by CashCraft • ${new Date().toLocaleDateString('en-US', { 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            })}
+            Generated by CashCraft • ${new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })}
           </div>
         </div>
       </body>
       </html>
     `;
-    
+
     return htmlContent;
   };
 
@@ -454,7 +454,7 @@ export default function Transactions() {
     try {
       const fileUri = `${FileSystem.documentDirectory}${filename}`;
       await FileSystem.writeAsStringAsync(fileUri, content);
-      
+
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(fileUri, {
           mimeType,
@@ -498,7 +498,7 @@ export default function Transactions() {
     .filter(tx => {
       // Enhanced full-text search across all fields
       const searchTerm = search.toLowerCase().trim();
-      
+
       if (searchTerm) {
         // Create a comprehensive search string from all transaction fields
         const searchableText = [
@@ -509,12 +509,12 @@ export default function Transactions() {
           tx.amount?.toString() || '',
           tx.type || '',
           // Format date for search
-          typeof tx.date === 'object' ? 
-            tx.date.toLocaleDateString('en-US', { 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            }) : 
+          typeof tx.date === 'object' ?
+            tx.date.toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            }) :
             tx.date?.toString() || '',
           // Add time if available
           tx.time || '',
@@ -523,20 +523,16 @@ export default function Transactions() {
         const matchesSearch = searchableText.includes(searchTerm);
         const matchesType = !filterType || tx.type === filterType.toLowerCase();
         const matchesCategory = !filterCategory || tx.categoryName?.toLowerCase() === filterCategory.toLowerCase();
-        
+
         return matchesSearch && matchesType && matchesCategory;
       } else {
         // No search term, just apply filters
         const matchesType = !filterType || tx.type === filterType.toLowerCase();
         const matchesCategory = !filterCategory || tx.categoryName?.toLowerCase() === filterCategory.toLowerCase();
-        
+
         // Debug logging
-        if (filterCategory) {
-          console.log('Filtering by category:', filterCategory);
-          console.log('Transaction category:', tx.categoryName);
-          console.log('Matches category:', matchesCategory);
-        }
-        
+        if (filterCategory) { }
+
         return matchesType && matchesCategory;
       }
     })
@@ -631,207 +627,207 @@ export default function Transactions() {
       borderWidth: 2,
       borderColor: theme.card,
     },
-    searchRow: { 
-      flexDirection: 'row', 
-      alignItems: 'center', 
-      backgroundColor: theme.card, 
-      borderRadius: 10, 
-      marginHorizontal: 20, 
-      marginBottom: 10, 
-      paddingHorizontal: 12, 
-      paddingVertical: 8, 
-      borderWidth: 1, 
-      borderColor: theme.border 
-    },
-    searchInput: { 
-      flex: 1, 
-      fontSize: 15, 
-      color: theme.text 
-    },
-    actionRow: { 
-      flexDirection: 'row', 
-      alignItems: 'center', 
-      marginHorizontal: 20, 
-      marginBottom: 10, 
-      gap: 10 
-    },
-    actionBtn: { 
-      flexDirection: 'row', 
-      alignItems: 'center', 
-      backgroundColor: theme.card, 
-      borderRadius: 8, 
-      paddingHorizontal: 16, 
-      paddingVertical: 10, 
-      marginRight: 8, 
-      borderWidth: 1, 
-      borderColor: theme.border 
-    },
-    actionBtnText: { 
-      marginLeft: 6, 
-      color: theme.text, 
-      fontWeight: 'bold', 
-      fontSize: 15 
-    },
-    listCard: { 
-      height: 480,
-      backgroundColor: theme.card, 
-      borderRadius: 16, 
-      margin: 20, 
-      marginTop: 0, 
-      padding: 0, 
-      borderWidth: 1, 
-      borderColor: theme.border,
-    },
-    txRow: { 
+    searchRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: 20, 
-      paddingHorizontal: 20, 
-      borderBottomWidth: 1, 
-      borderColor: theme.borderLight 
+      backgroundColor: theme.card,
+      borderRadius: 10,
+      marginHorizontal: 20,
+      marginBottom: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderWidth: 1,
+      borderColor: theme.border
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 15,
+      color: theme.text
+    },
+    actionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginHorizontal: 20,
+      marginBottom: 10,
+      gap: 10
+    },
+    actionBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.card,
+      borderRadius: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      marginRight: 8,
+      borderWidth: 1,
+      borderColor: theme.border
+    },
+    actionBtnText: {
+      marginLeft: 6,
+      color: theme.text,
+      fontWeight: 'bold',
+      fontSize: 15
+    },
+    listCard: {
+      height: 480,
+      backgroundColor: theme.card,
+      borderRadius: 16,
+      margin: 20,
+      marginTop: 0,
+      padding: 0,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    txRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 20,
+      paddingHorizontal: 20,
+      borderBottomWidth: 1,
+      borderColor: theme.borderLight
     },
     txContent: {
       flexDirection: 'row',
       alignItems: 'center',
       flex: 1,
     },
-    txIcon: { 
-      marginRight: 12, 
-      backgroundColor: theme.surface, 
-      borderRadius: 8, 
-      padding: 8 
+    txIcon: {
+      marginRight: 12,
+      backgroundColor: theme.surface,
+      borderRadius: 8,
+      padding: 8
     },
-    txLabel: { 
-      fontSize: 15, 
-      color: theme.text, 
-      fontWeight: 'bold' 
+    txLabel: {
+      fontSize: 15,
+      color: theme.text,
+      fontWeight: 'bold'
     },
-    txDate: { 
-      fontSize: 12, 
-      color: theme.textSecondary, 
-      marginTop: 2 
+    txDate: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      marginTop: 2
     },
-    txAmount: { 
-      fontSize: 15, 
-      color: theme.text, 
-      fontWeight: 'bold', 
-      marginLeft: 8 
+    txAmount: {
+      fontSize: 15,
+      color: theme.text,
+      fontWeight: 'bold',
+      marginLeft: 8
     },
     deleteButton: {
       padding: 8,
       marginLeft: 10,
     },
-    totalRow: { 
-      flexDirection: 'row', 
-      justifyContent: 'space-between', 
-      alignItems: 'center', 
-      padding: 18, 
-      borderTopWidth: 1, 
-      borderColor: theme.border 
+    totalRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 18,
+      borderTopWidth: 1,
+      borderColor: theme.border
     },
-    fixedTotalRow: { 
-      position: 'absolute', 
-      bottom: 0, 
-      left: 0, 
-      right: 0, 
-      flexDirection: 'row', 
-      justifyContent: 'space-between', 
-      alignItems: 'center', 
-      padding: 18, 
-      borderTopWidth: 1, 
+    fixedTotalRow: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 18,
+      borderTopWidth: 1,
       borderColor: theme.border,
       backgroundColor: theme.card,
       borderBottomLeftRadius: 16,
       borderBottomRightRadius: 16,
     },
-    totalLabel: { 
-      fontWeight: 'bold', 
-      color: theme.text, 
-      fontSize: 15 
+    totalLabel: {
+      fontWeight: 'bold',
+      color: theme.text,
+      fontSize: 15
     },
-    totalAmount: { 
-      fontWeight: 'bold', 
-      color: theme.text, 
-      fontSize: 15 
+    totalAmount: {
+      fontWeight: 'bold',
+      color: theme.text,
+      fontSize: 15
     },
-    modalOverlay: { 
-      flex: 1, 
-      backgroundColor: 'rgba(0,0,0,0.18)', 
-      justifyContent: 'center', 
-      alignItems: 'center' 
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.18)',
+      justifyContent: 'center',
+      alignItems: 'center'
     },
-    modalCard: { 
-      backgroundColor: theme.card, 
-      borderRadius: 18, 
-      width: '85%', 
-      maxWidth: 400, 
-      padding: 18, 
-      shadowColor: '#000', 
-      shadowOpacity: 0.10, 
-      shadowRadius: 12, 
-      shadowOffset: { width: 0, height: 4 }, 
+    modalCard: {
+      backgroundColor: theme.card,
+      borderRadius: 18,
+      width: '85%',
+      maxWidth: 400,
+      padding: 18,
+      shadowColor: '#000',
+      shadowOpacity: 0.10,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 4 },
       elevation: 8,
       borderWidth: 1,
       borderColor: theme.border,
     },
-    modalOption: { 
-      paddingVertical: 12 
+    modalOption: {
+      paddingVertical: 12
     },
-    modalOptionText: { 
-      fontSize: 16, 
-      color: theme.text 
+    modalOptionText: {
+      fontSize: 16,
+      color: theme.text
     },
-    modalSectionTitle: { 
-      fontWeight: 'bold', 
-      color: theme.text, 
-      fontSize: 15, 
-      marginBottom: 8 
+    modalSectionTitle: {
+      fontWeight: 'bold',
+      color: theme.text,
+      fontSize: 15,
+      marginBottom: 8
     },
-    filterChip: { 
-      backgroundColor: theme.touchable, 
-      borderRadius: 16, 
-      paddingHorizontal: 14, 
-      paddingVertical: 8, 
-      marginRight: 8, 
-      marginBottom: 8 
+    filterChip: {
+      backgroundColor: theme.touchable,
+      borderRadius: 16,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      marginRight: 8,
+      marginBottom: 8
     },
-    filterChipActive: { 
-      backgroundColor: theme.primary 
+    filterChipActive: {
+      backgroundColor: theme.primary
     },
-    filterChipText: { 
-      color: theme.text, 
-      fontWeight: 'bold' 
+    filterChipText: {
+      color: theme.text,
+      fontWeight: 'bold'
     },
-    filterChipTextActive: { 
-      color: theme.textInverse 
+    filterChipTextActive: {
+      color: theme.textInverse
     },
-    clearBtn: { 
-      marginTop: 16, 
-      alignSelf: 'flex-end' 
+    clearBtn: {
+      marginTop: 16,
+      alignSelf: 'flex-end'
     },
-    clearBtnText: { 
-      color: theme.primary, 
-      fontWeight: 'bold', 
-      fontSize: 15 
+    clearBtnText: {
+      color: theme.primary,
+      fontWeight: 'bold',
+      fontSize: 15
     },
-    downloadBtn: { 
-      flexDirection: 'row', 
-      alignItems: 'center', 
-      backgroundColor: theme.touchable, 
-      borderRadius: 10, 
-      padding: 14, 
-      marginTop: 10, 
-      gap: 8 
+    downloadBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.touchable,
+      borderRadius: 10,
+      padding: 14,
+      marginTop: 10,
+      gap: 8
     },
-    downloadBtnText: { 
-      color: theme.text, 
-      fontWeight: 'bold', 
-      fontSize: 15 
+    downloadBtnText: {
+      color: theme.text,
+      fontWeight: 'bold',
+      fontSize: 15
     },
-    downloadSubtitle: { 
-      fontSize: 14, 
-      color: theme.textSecondary, 
-      marginBottom: 10 
+    downloadSubtitle: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      marginBottom: 10
     },
     emptyStateContainer: {
       flex: 1,
@@ -887,19 +883,12 @@ export default function Transactions() {
   });
 
   if (loading) {
-    return (
-      <SafeAreaView style={styles.container} edges={['top','left','right']}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={{ marginTop: 16, color: theme.textSecondary }}>Loading transactions...</Text>
-        </View>
-      </SafeAreaView>
-    );
+    return <TransactionsScreenSkeleton />;
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top','left','right']}>
-      <View style={{flex: 1, backgroundColor: theme.background}}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top', 'left', 'right']}>
+      <View style={{ flex: 1, backgroundColor: theme.background }}>
         <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
             <Text style={styles.headerTitle}>Transactions</Text>
@@ -937,7 +926,7 @@ export default function Transactions() {
             <Text style={styles.actionBtnText}>Export</Text>
           </TouchableOpacity>
         </View>
-        
+
         {filteredTransactions.length > 0 ? (
           <View style={styles.listCard}>
             <FlatList
@@ -945,7 +934,7 @@ export default function Transactions() {
               keyExtractor={(item) => item.id || Math.random().toString()}
               renderItem={({ item }) => (
                 <View style={styles.txRow}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.txContent}
                     onPress={() => router.push({
                       pathname: '/components/transaction-details',
@@ -963,9 +952,9 @@ export default function Transactions() {
                       {item.type === 'income' ? '+' : '-'}₹ {item.amount.toLocaleString()}
                     </Text>
                   </TouchableOpacity>
-                  
+
                   {/* Delete Button */}
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.deleteButton}
                     onPress={() => handleDeleteTransaction(item)}
                   >
@@ -983,43 +972,43 @@ export default function Transactions() {
             </View>
           </View>
         ) : (
-                <View style={styles.emptyStateContainer}>
-                  <View style={styles.emptyStateIcon}>
+          <View style={styles.emptyStateContainer}>
+            <View style={styles.emptyStateIcon}>
               <FontAwesome5 name="receipt" size={50} color={theme.primary} />
-                  </View>
-                  <Text style={styles.emptyStateTitle}>No Transactions Found</Text>
-                  <Text style={styles.emptyStateMessage}>
-                    {search || filterType || filterCategory 
+            </View>
+            <Text style={styles.emptyStateTitle}>No Transactions Found</Text>
+            <Text style={styles.emptyStateMessage}>
+              {search || filterType || filterCategory
                 ? 'Try adjusting your search or filters to find more transactions.'
                 : 'Start by adding your first transaction to track your finances.'}
-                  </Text>
-                  {!search && !filterType && !filterCategory && (
-                    <TouchableOpacity 
-                      style={styles.emptyStateButton} 
-                      onPress={() => router.push('/(tabs)/add')}
-                    >
-                      <Text style={styles.emptyStateButtonText}>Add Transaction</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              )}
+            </Text>
+            {!search && !filterType && !filterCategory && (
+              <TouchableOpacity
+                style={styles.emptyStateButton}
+                onPress={() => router.push('/(tabs)/add')}
+              >
+                <Text style={styles.emptyStateButtonText}>Add Transaction</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         {/* Sort Modal */}
-        <Modal 
-          visible={showSort} 
-          transparent 
+        <Modal
+          visible={showSort}
+          transparent
           animationType="fade"
           onRequestClose={() => setShowSort(false)}
         >
-          <TouchableOpacity 
-            style={styles.modalOverlay} 
-            activeOpacity={1} 
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
             onPress={() => setShowSort(false)}
           >
-            <TouchableOpacity 
-              style={styles.modalCard} 
-              activeOpacity={1} 
-              onPress={() => {}}
+            <TouchableOpacity
+              style={styles.modalCard}
+              activeOpacity={1}
+              onPress={() => { }}
             >
               <Text style={styles.modalSectionTitle}>Sort Transactions</Text>
               {SORT_OPTIONS.map(opt => (
@@ -1032,27 +1021,27 @@ export default function Transactions() {
         </Modal>
 
         {/* Filter Modal */}
-        <Modal 
-          visible={showFilter} 
-          transparent 
+        <Modal
+          visible={showFilter}
+          transparent
           animationType="fade"
           onRequestClose={() => setShowFilter(false)}
         >
-          <TouchableOpacity 
-            style={styles.modalOverlay} 
-            activeOpacity={1} 
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
             onPress={() => setShowFilter(false)}
           >
-            <TouchableOpacity 
-              style={styles.modalCard} 
-              activeOpacity={1} 
-              onPress={() => {}}
+            <TouchableOpacity
+              style={styles.modalCard}
+              activeOpacity={1}
+              onPress={() => { }}
             >
               <Text style={styles.modalSectionTitle}>Filter by Type</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 16 }}>
                 {TYPES.map(type => (
-                  <TouchableOpacity 
-                    key={type} 
+                  <TouchableOpacity
+                    key={type}
                     style={[styles.filterChip, filterType === type && styles.filterChipActive]}
                     onPress={() => setFilterType(filterType === type ? null : type)}
                   >
@@ -1060,12 +1049,12 @@ export default function Transactions() {
                   </TouchableOpacity>
                 ))}
               </View>
-              
+
               <Text style={styles.modalSectionTitle}>Filter by Category</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 16 }}>
                 {uniqueCategories.map(cat => (
-                  <TouchableOpacity 
-                    key={cat} 
+                  <TouchableOpacity
+                    key={cat}
                     style={[styles.filterChip, filterCategory === cat && styles.filterChipActive]}
                     onPress={() => setFilterCategory(filterCategory === cat ? null : cat)}
                   >
@@ -1073,7 +1062,7 @@ export default function Transactions() {
                   </TouchableOpacity>
                 ))}
               </View>
-              
+
               <TouchableOpacity style={styles.clearBtn} onPress={() => { setFilterType(null); setFilterCategory(null); setShowFilter(false); }}>
                 <Text style={styles.clearBtnText}>Clear All Filters</Text>
               </TouchableOpacity>
@@ -1082,30 +1071,30 @@ export default function Transactions() {
         </Modal>
 
         {/* Download Modal */}
-        <Modal 
-          visible={showDownload} 
-          transparent 
+        <Modal
+          visible={showDownload}
+          transparent
           animationType="fade"
           onRequestClose={() => setShowDownload(false)}
         >
-          <TouchableOpacity 
-            style={styles.modalOverlay} 
-            activeOpacity={1} 
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
             onPress={() => setShowDownload(false)}
           >
-            <TouchableOpacity 
-              style={styles.modalCard} 
-              activeOpacity={1} 
-              onPress={() => {}}
+            <TouchableOpacity
+              style={styles.modalCard}
+              activeOpacity={1}
+              onPress={() => { }}
             >
               <Text style={styles.modalSectionTitle}>Export Transactions</Text>
               <Text style={styles.downloadSubtitle}>Choose your preferred format</Text>
-              
+
               <TouchableOpacity style={styles.downloadBtn} onPress={handleDownloadCSV}>
                 <Ionicons name="document-text-outline" size={20} color={theme.primary} />
                 <Text style={styles.downloadBtnText}>Download as CSV</Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity style={styles.downloadBtn} onPress={handleDownloadPDF}>
                 <Ionicons name="document-outline" size={20} color={theme.primary} />
                 <Text style={styles.downloadBtnText}>Download as Text</Text>

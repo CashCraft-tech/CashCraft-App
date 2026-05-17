@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { notificationService } from '../services/notificationService';
+import { SettingsListSkeleton } from './skeleton';
 import { useAuth } from '../context/AuthContext';
 
 interface NotificationSettingsProps {
@@ -119,12 +120,7 @@ export default function NotificationSettings({ onClose }: NotificationSettingsPr
   };
 
   if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4caf50" />
-        <Text style={styles.loadingText}>Loading...</Text>
-      </View>
-    );
+    return <SettingsListSkeleton rows={5} />;
   }
 
   return (

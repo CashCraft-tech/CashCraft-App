@@ -98,8 +98,6 @@ export const categoriesService = {
 
       // Only update transactions if there are any
       if (transactions && transactions.length > 0) {
-        console.log(`Moving ${transactions.length} transactions to "Others" category`);
-        
         // Update all transactions to use "Others" category
         const updatePromises = transactions.map(transaction => 
           transactionsService.updateTransaction(transaction.id!, {
@@ -112,14 +110,10 @@ export const categoriesService = {
 
         // Wait for all transaction updates to complete
         await Promise.all(updatePromises);
-        console.log('All transactions moved successfully');
-      } else {
-        console.log('No transactions found for this category');
-      }
+      } else {}
 
       // Now delete the category
       await deleteDoc(doc(db, 'categories', categoryId));
-      console.log('Category deleted successfully');
     } catch (error) {
       console.error('Error deleting category:', error);
       throw error;

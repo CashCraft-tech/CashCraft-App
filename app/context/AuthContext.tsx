@@ -20,26 +20,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('Setting up auth state listener...');
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      console.log('Auth state changed:', user ? `User: ${user.email}` : 'No user');
-      
       // Set user immediately without delay
       setUser(user);
       setLoading(false);
-      console.log('Auth state updated - user:', user ? 'logged in' : 'not logged in');
-      
+
       // Initialize notifications for logged-in user
       if (user) {
         try {
-          console.log('Initializing notifications for user:', user.uid);
           const success = await notificationService.initializeForUser(user.uid);
-          if (success) {
-            console.log('Notifications initialized successfully');
-            // No welcome notification - only low balance alerts
-          } else {
-            console.log('Failed to initialize notifications');
-          }
+          if (success) {} else {}
         } catch (error) {
           console.error('Error initializing notifications:', error);
         }

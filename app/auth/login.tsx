@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, ScrollView, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { authService } from "../services/authService";
+import { navigateToAppHome } from "../utils/navigation";
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,20 +26,13 @@ export default function Login() {
     }
     setLoading(true);
     try {
-      console.log('Attempting to sign in with:', email);
       const result = await authService.signIn(email, password);
-      
+
       if (result.success && result.user) {
-        console.log('Sign in successful:', result.user.email);
-        
-        // Show success message briefly before navigation
-        setTimeout(() => {
-          router.replace('/(tabs)/home');
-        }, 1500);
+        navigateToAppHome();
       } else {
         setError(result.error?.message || 'Sign in failed. Please try again.');
       }
-      
     } catch (err: any) {
       console.error('Sign in error:', err);
       setError('Sign in failed. Please try again.');
