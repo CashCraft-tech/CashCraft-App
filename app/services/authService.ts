@@ -277,10 +277,28 @@ export const authService = {
     }
   },
 
-  // Validate email format
+  // Validate email format and domain
   validateEmail(email: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    if (!emailRegex.test(email)) return false;
+    
+    // Extract domain
+    const parts = email.split('@');
+    if (parts.length !== 2) return false;
+    const domain = parts[1].toLowerCase();
+    
+    // Valid domains list
+    const validDomains = [
+      'gmail.com',
+      'outlook.com',
+      'yahoo.com',
+      'hotmail.com',
+      'icloud.com',
+      'live.com',
+      'msn.com'
+    ];
+    
+    return validDomains.includes(domain);
   },
 
   // Validate password strength

@@ -1,18 +1,19 @@
-import React, { useState, useEffect } from "react";
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Image } from "react-native";
-import { Ionicons, MaterialIcons, Feather, FontAwesome5, FontAwesome } from '@expo/vector-icons';
+import { Feather, Ionicons, MaterialIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { authService } from '../services/authService';
-import { notificationService } from '../services/notificationService';
+import { doc, getDoc } from 'firebase/firestore';
+import React, { useEffect, useState } from "react";
+import { Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
+import CurrencyPicker from '../components/CurrencyPicker';
+import { ProfileScreenSkeleton } from '../components/skeleton';
+import ThemeToggle from '../components/ThemeToggle';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { formatDateShort } from '../utils/dateUtils';
-import { getDoc, doc } from 'firebase/firestore';
-import ThemeToggle from '../components/ThemeToggle';
 import { db } from '../firebaseConfig';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ProfileScreenSkeleton } from '../components/skeleton';
+import { authService } from '../services/authService';
+import { notificationService } from '../services/notificationService';
+import { formatDateShort } from '../utils/dateUtils';
 import { navigateToLogin } from '../utils/navigation';
 
 export default function Profile() {
@@ -26,7 +27,7 @@ export default function Profile() {
 
   const { user: authUser } = useAuth();
   const { theme } = useTheme();
-  
+
   // Fetch user profile from Firestore
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -105,7 +106,7 @@ export default function Profile() {
 
   const handleEditProfile = () => Alert.alert('Edit Profile', 'Edit profile clicked!');
   const handleChangeAvatar = () => Alert.alert('Feature Coming Soon!', 'Profile image upload functionality will be available in the next update.');
-  
+
   const handleSignOut = async () => {
     Alert.alert(
       'Sign Out',
@@ -285,7 +286,7 @@ export default function Profile() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top','left','right']}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Profile Title */}
         <View style={{ marginBottom: 18 }}>
@@ -311,9 +312,9 @@ export default function Profile() {
               <Text style={profileStyles.email}>{user.email}</Text>
               <Text style={profileStyles.memberSince}>Member since {user.memberSince}</Text>
             </View>
-           
+
           </View>
-         
+
         </View>
 
         {/* Account Section */}
@@ -380,6 +381,7 @@ export default function Profile() {
         <Text style={styles.sectionTitle}>Preferences</Text>
         <View style={styles.card}>
           <ThemeToggle />
+          <CurrencyPicker />
           <TouchableOpacity style={styles.row} onPress={handleResetPermissions}>
             <View style={styles.iconWrap}><Ionicons name="refresh" size={22} color="#B0B0B0" /></View>
             <View style={{ flex: 1 }}>
@@ -428,8 +430,8 @@ export default function Profile() {
         </View>
 
         {/* Sign Out */}
-        <View style={[styles.card, { marginBottom: 32 }]}> 
-          <TouchableOpacity style={[styles.row]} onPress={handleSignOut}> 
+        <View style={[styles.card, { marginBottom: 32 }]}>
+          <TouchableOpacity style={[styles.row]} onPress={handleSignOut}>
             <View style={styles.iconWrap}><MaterialIcons name="logout" size={22} color="#FF5252" /></View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.rowLabel, { color: '#FF5252' }]}>Sign Out</Text>
@@ -437,14 +439,13 @@ export default function Profile() {
             </View>
           </TouchableOpacity>
         </View>
-        <View style={{flex:1,justifyContent:'center',alignItems:'center',marginBottom:64}}>
-        <Text style={{fontSize:12,color:'#888'}}>Version 1.0.0</Text>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', marginBottom: 64 }}>
+          <Text style={{ fontSize: 12, color: '#888' }}>Version 1.0.0</Text>
 
-          <Text style={{fontSize:12,color:'#888'}}>Copyright © 2025 CashCraft. All rights reserved.</Text>
+          <Text style={{ fontSize: 12, color: '#888' }}>Copyright © 2026 CashCraft. All rights reserved.</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
- 

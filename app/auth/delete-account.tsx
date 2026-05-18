@@ -1,11 +1,11 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from "expo-router";
+import React, { useState } from "react";
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { authService } from "../services/authService";
 import { navigateToLogin } from "../utils/navigation";
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function DeleteAccount() {
   const router = useRouter();
@@ -34,35 +34,35 @@ export default function DeleteAccount() {
           style: 'destructive',
           onPress: async () => {
             setLoading(true);
-                         try {
-               const result = await authService.deleteAccount(password);
-               
-               if (result.success) {
-                 // Force sign out to clear auth state
-                 await authService.signOut();
-                 
-                 Alert.alert(
-                   'Account Deleted',
-                   'Your account has been permanently deleted. Thank you for using CashCraft.',
-                   [
-                     {
-                       text: 'OK',
-                                               onPress: () => {
-                          // Navigate to login and clear navigation stack
-                          navigateToLogin();
-                        },
-                     },
-                   ]
-                 );
-               } else {
-                 setError(result.error?.message || 'Failed to delete account. Please try again.');
-               }
-             } catch (err: any) {
-               console.error('Delete account error:', err);
-               setError('Failed to delete account. Please try again.');
-             } finally {
-               setLoading(false);
-             }
+            try {
+              const result = await authService.deleteAccount(password);
+
+              if (result.success) {
+                // Force sign out to clear auth state
+                await authService.signOut();
+
+                Alert.alert(
+                  'Account Deleted',
+                  'Your account has been permanently deleted. Thank you for using CashCraft.',
+                  [
+                    {
+                      text: 'OK',
+                      onPress: () => {
+                        // Navigate to login and clear navigation stack
+                        navigateToLogin();
+                      },
+                    },
+                  ]
+                );
+              } else {
+                setError(result.error?.message || 'Failed to delete account. Please try again.');
+              }
+            } catch (err: any) {
+              console.error('Delete account error:', err);
+              setError('Failed to delete account. Please try again.');
+            } finally {
+              setLoading(false);
+            }
           },
         },
       ]
@@ -234,7 +234,7 @@ export default function DeleteAccount() {
             </View>
 
             <View style={styles.box}>
-              <Text style={styles.warningTitle}>⚠️ Final Warning</Text>
+              <Text style={styles.warningTitle}>Final Warning</Text>
               <Text style={styles.warningText}>
                 By deleting your account, you will lose access to all your financial data, transaction history, and account settings permanently.
               </Text>

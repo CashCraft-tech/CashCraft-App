@@ -1,4 +1,4 @@
-import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+// import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import Constants from 'expo-constants';
 
 // Read Cloudinary config from app.config.js extra (sourced from .env)
@@ -16,21 +16,8 @@ export const cloudinaryService = {
    * Returns the URI of the compressed image.
    */
   async compressImage(fileUri: string): Promise<string> {
-    try {
-      const compressed = await manipulateAsync(
-        fileUri,
-        [{ resize: { width: MAX_WIDTH } }],
-        {
-          compress: 0.6, // 60% quality — good balance of size vs clarity
-          format: SaveFormat.JPEG,
-        }
-      );
-      return compressed.uri;
-    } catch (error) {
-      console.error('Image compression error:', error);
-      // Fall back to original if compression fails
-      return fileUri;
-    }
+    // Skipping compression because the native module requires a rebuild
+    return fileUri;
   },
 
   /**
@@ -71,3 +58,5 @@ export const cloudinaryService = {
     }
   }
 };
+
+export default function IgnoredRoute() { return null; }

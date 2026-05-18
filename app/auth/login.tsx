@@ -24,6 +24,12 @@ export default function Login() {
       setError('Please enter both email and password');
       return;
     }
+    
+    if (!authService.validateEmail(email.trim())) {
+      setError('Please enter a valid email address with a supported domain (e.g., gmail.com, outlook.com)');
+      return;
+    }
+
     setLoading(true);
     try {
       const result = await authService.signIn(email, password);

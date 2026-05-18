@@ -8,7 +8,9 @@ import { StatusBar } from 'expo-status-bar';
 import { categoriesService, Category } from '../services/categoriesService';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useCurrency } from '../context/CurrencyContext';
 import { notificationService } from '../services/notificationService';
+import { validationUtils } from '../utils/validationUtils';
 import { CategoriesScreenSkeleton } from './skeleton';
 
 const ICONS = [
@@ -85,6 +87,7 @@ export default function ManageCategories() {
   const router = useRouter();
   const { user } = useAuth();
   const { theme } = useTheme();
+  const { currency } = useCurrency();
 
   const fetchCategories = async () => {
     if (user?.uid) {
@@ -121,7 +124,11 @@ export default function ManageCategories() {
   };
 
   const handleAddOrEdit = async () => {
-    if (!categoryName.trim() || !user?.uid) return;
+    if (!user?.uid) return;
+    if (!validationUtils.validateText(categoryName)) {
+      Alert.alert('Invalid Name', 'Category name must be between 2 and 50 characters.');
+      return;
+    }
     
     try {
       if (editIndex !== null) {
@@ -447,7 +454,7 @@ export default function ManageCategories() {
                       </View>
                       <View style={{ marginLeft: 10 }}>
                         <Text style={[styles.catLabel, { color: theme.text }]}>{addName}</Text>
-                        <Text style={[styles.catSpent, { color: theme.textSecondary }]}>Spent: ₹0</Text>
+                        <Text style={[styles.catSpent, { color: theme.textSecondary }]}>Spent: {currency}0</Text>
                       </View>
                     </View>
                   </View>

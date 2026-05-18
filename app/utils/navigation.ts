@@ -15,3 +15,5 @@ export function navigateToLogin() {
   }
   router.replace('/auth/login');
 }
+
+export default function IgnoredRoute() { return null; }

@@ -9,6 +9,8 @@ import { categoriesService, Category as FirebaseCategory } from '../services/cat
 import { transactionsService, Transaction, TransactionStats } from '../services/transactionsService';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useCurrency } from '../context/CurrencyContext';
+import { getIconComponent } from '../utils/iconUtils';
 
 // TypeScript Interfaces
 interface Category {
@@ -79,6 +81,7 @@ function DonutChart({ data, total }: DonutChartProps) {
 export default function Dashboard() {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const { currency } = useCurrency();
   const [period, setPeriod] = useState<string>('Monthly');
   const [categories, setCategories] = useState<Category[]>([]);
   const [topSpending, setTopSpending] = useState<TopSpendingCategory[]>([]);
@@ -209,23 +212,7 @@ export default function Dashboard() {
     setRefreshing(false);
   };
 
-  const getIconComponent = React.useCallback((iconName: string, color: string, size: number = 24) => {
-    const iconMap: { [key: string]: React.ReactNode } = {
-      'food': <MaterialIcons name="restaurant" size={size} color={color} />,
-      'transport': <MaterialIcons name="directions-car" size={size} color={color} />,
-      'shopping': <MaterialIcons name="shopping-bag" size={size} color={color} />,
-      'entertainment': <MaterialIcons name="movie" size={size} color={color} />,
-      'health': <MaterialIcons name="local-hospital" size={size} color={color} />,
-      'education': <MaterialIcons name="school" size={size} color={color} />,
-      'bills': <MaterialIcons name="receipt" size={size} color={color} />,
-      'salary': <MaterialIcons name="account-balance-wallet" size={size} color={color} />,
-      'freelance': <MaterialIcons name="work" size={size} color={color} />,
-      'investment': <MaterialIcons name="trending-up" size={size} color={color} />,
-      'gift': <MaterialIcons name="card-giftcard" size={size} color={color} />,
-      'other': <MaterialIcons name="more-horiz" size={size} color={color} />
-    };
-    return iconMap[iconName] || <MaterialIcons name="category" size={size} color={color} />;
-  }, []);
+
 
   const handlePeriodChange = (selectedPeriod: string): void => {
     setPeriod(selectedPeriod);
@@ -644,18 +631,18 @@ export default function Dashboard() {
           <View style={styles.summaryRow}>
             <View style={styles.summaryItem}>
               <Text style={styles.summaryLabel}>Income</Text>
-              <Text style={[styles.summaryValue, { color: theme.success }]}>₹{stats.totalIncome.toFixed(0)}</Text>
+              <Text style={[styles.summaryValue, { color: theme.success }]}>{currency}{stats.totalIncome.toFixed(0)}</Text>
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryItem}>
               <Text style={styles.summaryLabel}>Expense</Text>
-              <Text style={[styles.summaryValue, { color: theme.error }]}>₹{stats.totalExpense.toFixed(0)}</Text>
+              <Text style={[styles.summaryValue, { color: theme.error }]}>{currency}{stats.totalExpense.toFixed(0)}</Text>
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryItem}>
               <Text style={styles.summaryLabel}>Balance</Text>
               <Text style={[styles.summaryValue, { color: stats.balance >= 0 ? theme.primary : theme.error }]}>
-                ₹{stats.balance.toFixed(0)}
+                {currency}{stats.balance.toFixed(0)}
               </Text>
             </View>
           </View>
@@ -668,7 +655,7 @@ export default function Dashboard() {
             <View style={styles.donutRow}>
               <DonutChart data={categories} total={totalSpent} />
               <View style={styles.donutCenter}>
-                <Text style={styles.donutAmount}>₹{totalSpent.toFixed(0)}</Text>
+                <Text style={styles.donutAmount}>{currency}{totalSpent.toFixed(0)}</Text>
                 <Text style={styles.donutLabel}>Total Spent</Text>
                 <Text style={styles.donutPeriod}>{period === 'Daily' ? 'Today' : period === 'Weekly' ? 'This Week' : 'This Month'}</Text>
               </View>
@@ -678,7 +665,7 @@ export default function Dashboard() {
                 <View key={cat.label} style={styles.legendRow}>
                   <View style={[styles.legendDot, { backgroundColor: cat.color }]} />
                   <Text style={styles.legendLabel}>{cat.label}</Text>
-                  <Text style={styles.legendValue}>₹{cat.value}</Text>
+                  <Text style={styles.legendValue}>{currency}{cat.value}</Text>
                 </View>
               ))}
             </View>
@@ -716,7 +703,7 @@ export default function Dashboard() {
                   </View>
                 </View>
                 <View style={styles.topRight}>
-                  <Text style={styles.topValue}>₹{cat.value}</Text>
+                  <Text style={styles.topValue}>{currency}{cat.value}</Text>
                   <Text style={styles.topPercent}>{cat.percent}%</Text>
                   <View style={[styles.topBarBg, { backgroundColor: theme.border }]}> 
                     <View style={[styles.topBarFill, { backgroundColor: cat.color, width: `${cat.percent}%` }]} />

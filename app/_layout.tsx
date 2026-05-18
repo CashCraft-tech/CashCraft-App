@@ -5,6 +5,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { CurrencyProvider } from './context/CurrencyContext';
 import NavigationBarManager from './components/NavigationBarManager';
 import { AppLoadingSkeleton } from './components/skeleton';
 
@@ -20,9 +21,11 @@ function RootLayoutNav() {
     if (loading || !navigationState?.key) return;
 
     const inAuthGroup = segments[0] === 'auth';
+    const isDeleteAccount = segments.join('/') === 'auth/delete-account';
 
     if (user) {
-      if (inAuthGroup) {
+      // Allow logged-in users to access delete-account, but redirect from other auth screens
+      if (inAuthGroup && !isDeleteAccount) {
         router.replace('/');
       }
     } else if (!inAuthGroup) {
@@ -69,7 +72,9 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <AuthProvider>
         <ThemeProvider>
-          <RootLayoutContent />
+          <CurrencyProvider>
+            <RootLayoutContent />
+          </CurrencyProvider>
         </ThemeProvider>
       </AuthProvider>
     </SafeAreaProvider>

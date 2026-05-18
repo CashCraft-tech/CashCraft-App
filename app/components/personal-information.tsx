@@ -21,6 +21,7 @@ import { UserService, PersonalInfo } from '../services/userService';
 import { LinearGradient } from 'expo-linear-gradient';
 import { authService } from '../services/authService';
 import { auth } from '../firebaseConfig';
+import { validationUtils } from '../utils/validationUtils';
 
 export default function PersonalInformation() {
   const { user } = useAuth();
@@ -142,6 +143,31 @@ export default function PersonalInformation() {
 
   const handleSave = async () => {
     if (!user) return;
+
+    if (!validationUtils.validateName(personalInfo.fullName)) {
+      Alert.alert('Invalid Name', 'Please enter a valid full name (letters only).');
+      return;
+    }
+
+    if (personalInfo.phone && !validationUtils.validatePhone(personalInfo.phone)) {
+      Alert.alert('Invalid Phone', 'Please enter a valid phone number (10-15 digits).');
+      return;
+    }
+
+    if (personalInfo.profession && !validationUtils.validateName(personalInfo.profession)) {
+      Alert.alert('Invalid Profession', 'Please enter a valid profession (letters only).');
+      return;
+    }
+
+    if (personalInfo.username && !validationUtils.validateUsername(personalInfo.username)) {
+      Alert.alert('Invalid Username', 'Username must be 3-20 characters long and contain only letters, numbers, or underscores.');
+      return;
+    }
+
+    if (personalInfo.dateOfBirth && !validationUtils.validateDate(personalInfo.dateOfBirth)) {
+      Alert.alert('Invalid Date of Birth', 'Please enter a valid date in DD/MM/YYYY format.');
+      return;
+    }
 
     try {
       setSaving(true);

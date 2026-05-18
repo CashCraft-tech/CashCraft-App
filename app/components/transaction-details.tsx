@@ -7,6 +7,8 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
 import { formatDate } from '../utils/dateUtils';
 import { useTheme } from '../context/ThemeContext';
+import { useCurrency } from '../context/CurrencyContext';
+import { getIconComponent } from '../utils/iconUtils';
 
 export type Transaction = {
   id?: string;
@@ -40,6 +42,7 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function TransactionDetails() {
   const { theme } = useTheme();
+  const { currency } = useCurrency();
   const { transaction } = useLocalSearchParams();
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [receiptLoading, setReceiptLoading] = useState(true);
@@ -58,67 +61,7 @@ export default function TransactionDetails() {
   }
   const total = tx.breakdown?.reduce((sum, item) => sum + item.amount, 0) || 0;
   
-  const getIconComponent = (iconName: string, color: string, size: number = 24) => {
-    const iconMap: { [key: string]: any } = {
-      // FontAwesome5 icons (from manage categories)
-      'cart': <FontAwesome5 name="shopping-cart" size={size} color={color} />,
-      'car': <FontAwesome5 name="car" size={size} color={color} />,
-      'home': <FontAwesome5 name="home" size={size} color={color} />,
-      'utensils': <FontAwesome5 name="utensils" size={size} color={color} />,
-      'gamepad': <FontAwesome5 name="gamepad" size={size} color={color} />,
-      'plane': <FontAwesome5 name="plane" size={size} color={color} />,
-      'gift': <FontAwesome5 name="gift" size={size} color={color} />,
-      'heart': <FontAwesome5 name="heart" size={size} color={color} />,
-      'credit-card': <FontAwesome5 name="credit-card" size={size} color={color} />,
-      'shopping-bag': <FontAwesome5 name="shopping-bag" size={size} color={color} />,
-      'bolt': <FontAwesome5 name="bolt" size={size} color={color} />,
-      'dollar-sign': <FontAwesome5 name="dollar-sign" size={size} color={color} />,
-      'music': <FontAwesome5 name="music" size={size} color={color} />,
-      'film': <FontAwesome5 name="film" size={size} color={color} />,
-      'book': <FontAwesome5 name="book" size={size} color={color} />,
-      'medkit': <FontAwesome5 name="medkit" size={size} color={color} />,
-      'paw': <FontAwesome5 name="paw" size={size} color={color} />,
-      'tshirt': <FontAwesome5 name="tshirt" size={size} color={color} />,
-      'mobile-alt': <FontAwesome5 name="mobile-alt" size={size} color={color} />,
-      'glass-cheers': <FontAwesome5 name="glass-cheers" size={size} color={color} />,
-      
-      // MaterialIcons and Ionicons (legacy support)
-      'restaurant': <MaterialIcons name="restaurant" size={size} color={color} />,
-      'car-sport': <Ionicons name="car-sport" size={size} color={color} />,
-      'receipt': <MaterialIcons name="receipt" size={size} color={color} />,
-      'movie': <MaterialIcons name="movie" size={size} color={color} />,
-      'cash': <Ionicons name="cash" size={size} color={color} />,
-      'laptop': <Ionicons name="laptop" size={size} color={color} />,
-      'medical': <Ionicons name="medical" size={size} color={color} />,
-      'school': <Ionicons name="school" size={size} color={color} />,
-      'airplane': <Ionicons name="airplane" size={size} color={color} />,
-      'bus': <Ionicons name="bus" size={size} color={color} />,
-      'train': <Ionicons name="train" size={size} color={color} />,
-      'bicycle': <Ionicons name="bicycle" size={size} color={color} />,
-      'walk': <Ionicons name="walk" size={size} color={color} />,
-      'fitness': <Ionicons name="fitness" size={size} color={color} />,
-      'game-controller': <Ionicons name="game-controller" size={size} color={color} />,
-      'library': <Ionicons name="library" size={size} color={color} />,
-      'card': <Ionicons name="card" size={size} color={color} />,
-      'wallet': <Ionicons name="wallet" size={size} color={color} />,
-      'bank': <Ionicons name="business" size={size} color={color} />,
-      'phone': <Ionicons name="phone-portrait" size={size} color={color} />,
-      'wifi': <Ionicons name="wifi" size={size} color={color} />,
-      'electricity': <Ionicons name="flash" size={size} color={color} />,
-      'water': <Ionicons name="water" size={size} color={color} />,
-      'gas': <Ionicons name="flame" size={size} color={color} />,
-      'internet': <Ionicons name="globe" size={size} color={color} />,
-      'tv': <Ionicons name="tv" size={size} color={color} />,
-      'camera': <Ionicons name="camera" size={size} color={color} />,
-      'pizza': <Ionicons name="pizza" size={size} color={color} />,
-      'beer': <Ionicons name="beer" size={size} color={color} />,
-      'wine': <Ionicons name="wine" size={size} color={color} />,
-      'coffee': <Ionicons name="cafe" size={size} color={color} />,
-      'fast-food': <Ionicons name="fast-food" size={size} color={color} />,
-      'ice-cream': <Ionicons name="ice-cream" size={size} color={color} />,
-    };
-    return iconMap[iconName] || <MaterialIcons name="category" size={size} color={color} />;
-  };
+
 
   const styles = StyleSheet.create({
     container: {
@@ -495,7 +438,7 @@ export default function TransactionDetails() {
           </View>
           <Text style={styles.amountLabel}>Amount</Text>
           <Text style={[styles.amountValue, { color: tx.type === 'income' ? theme.success : theme.error }]}>
-            {tx.type === 'income' ? '+' : '-'}₹ {tx.amount.toLocaleString()}
+            {tx.type === 'income' ? '+' : '-'}{currency} {tx.amount.toLocaleString()}
           </Text>
         </View>
 
@@ -550,12 +493,12 @@ export default function TransactionDetails() {
             {tx.breakdown.map((item, idx) => (
               <View key={item.label} style={styles.breakdownRow2}>
                 <Text style={styles.breakdownLabel2}>{item.label}</Text>
-                <Text style={styles.breakdownAmount2}>₹ {item.amount}</Text>
+                <Text style={styles.breakdownAmount2}>{currency} {item.amount}</Text>
               </View>
             ))}
             <View style={styles.breakdownTotal2}>
               <Text style={styles.breakdownTotalLabel2}>Total</Text>
-              <Text style={styles.breakdownTotalAmount2}>₹ {total}</Text>
+              <Text style={styles.breakdownTotalAmount2}>{currency} {total}</Text>
             </View>
           </View>
         )}

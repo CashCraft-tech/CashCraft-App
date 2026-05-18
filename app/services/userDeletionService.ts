@@ -135,4 +135,6 @@ export const userDeletionService = {
       };
     }
   }
-}; 
+};
+
+export default function IgnoredRoute() { return null; }

@@ -10,6 +10,10 @@ import { transactionsService } from '../services/transactionsService';
 import { cloudinaryService } from '../services/cloudinaryService';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useCurrency } from '../context/CurrencyContext';
+import { validationUtils } from '../utils/validationUtils';
+import { getIconComponent } from '../utils/iconUtils';
+import { Picker } from '@react-native-picker/picker';
 import { router } from 'expo-router';
 import { notificationService } from '../services/notificationService';
 
@@ -24,6 +28,7 @@ const PAYMENT_TYPES = [
 export default function Add() {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const { currency } = useCurrency();
   
   const styles = StyleSheet.create({
     scrollContent: { 
@@ -241,7 +246,25 @@ export default function Add() {
 
   // Save transaction to Firebase
   const handleSaveTransaction = async () => {
-    if (!user?.uid || !selectedCategory) return;
+    if (!user?.uid || !selectedCategory) {
+      Alert.alert('Missing Field', 'Please select a category.');
+      return;
+    }
+
+    if (!validationUtils.validateAmount(amount)) {
+      Alert.alert('Invalid Amount', 'Please enter a valid positive amount.');
+      return;
+    }
+
+    if (!validationUtils.validateText(title)) {
+      Alert.alert('Invalid Title', 'Please enter a valid title (2-50 characters).');
+      return;
+    }
+
+    if (!validationUtils.validateDate(date)) {
+      Alert.alert('Invalid Date', 'Please enter a valid date (DD-MM-YYYY).');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -299,19 +322,7 @@ export default function Add() {
     }
   };
 
-  const getIconComponent = (iconName: string, color: string, size: number = 20) => {
-    const iconMap: { [key: string]: any } = {
-      'restaurant': <MaterialIcons name="restaurant" size={size} color={color} />,
-      'car-sport': <Ionicons name="car-sport" size={size} color={color} />,
-      'receipt': <MaterialIcons name="receipt" size={size} color={color} />,
-      'shopping-bag': <MaterialIcons name="shopping-bag" size={size} color={color} />,
-      'movie': <MaterialIcons name="movie" size={size} color={color} />,
-      'heart': <Ionicons name="heart" size={size} color={color} />,
-      'cash': <Ionicons name="cash" size={size} color={color} />,
-      'laptop': <Ionicons name="laptop" size={size} color={color} />,
-    };
-    return iconMap[iconName] || <MaterialIcons name="category" size={size} color={color} />;
-  };
+
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }} edges={['top','left','right','bottom']}>
@@ -397,7 +408,7 @@ export default function Add() {
           {/* Amount */}
           <Text style={styles.label}>Amount</Text>
           <View style={styles.amountRow}>
-            <Text style={styles.currency}>₹</Text>
+            <Text style={styles.currency}>{currency}</Text>
             <TextInput
               style={styles.amountInput}
               placeholder="0.00"

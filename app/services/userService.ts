@@ -73,3 +73,5 @@ export const UserService = {
     return { emailVerificationSent: !!emailChanged };
   }
 };
+
+export default function IgnoredRoute() { return null; }

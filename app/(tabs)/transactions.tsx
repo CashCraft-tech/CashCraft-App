@@ -1,5 +1,5 @@
 import { FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { router, useFocusEffect } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import React, { useEffect, useState } from "react";
@@ -8,9 +8,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { TransactionsScreenSkeleton } from '../components/skeleton';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useCurrency } from '../context/CurrencyContext';
 import { notificationService } from '../services/notificationService';
 import { Transaction, transactionsService } from '../services/transactionsService';
 import { formatDateShort } from '../utils/dateUtils';
+import { getIconComponent } from '../utils/iconUtils';
 
 // Get screen dimensions
 const { height: screenHeight } = Dimensions.get('window');
@@ -33,6 +35,7 @@ const SORT_OPTIONS = [
 export default function Transactions() {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const { currency } = useCurrency();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -86,7 +89,7 @@ export default function Transactions() {
 
     Alert.alert(
       'Delete Transaction',
-      `Are you sure you want to delete "${transaction.description}" for ₹${transaction.amount}?`,
+      `Are you sure you want to delete "${transaction.description}" for ${currency}${transaction.amount}?`,
       [
         {
           text: 'Cancel',
@@ -121,67 +124,7 @@ export default function Transactions() {
     );
   };
 
-  const getIconComponent = (iconName: string, color: string, size: number = 24) => {
-    const iconMap: { [key: string]: any } = {
-      // FontAwesome5 icons (from manage categories)
-      'cart': <FontAwesome5 name="shopping-cart" size={size} color={color} />,
-      'car': <FontAwesome5 name="car" size={size} color={color} />,
-      'home': <FontAwesome5 name="home" size={size} color={color} />,
-      'utensils': <FontAwesome5 name="utensils" size={size} color={color} />,
-      'gamepad': <FontAwesome5 name="gamepad" size={size} color={color} />,
-      'plane': <FontAwesome5 name="plane" size={size} color={color} />,
-      'gift': <FontAwesome5 name="gift" size={size} color={color} />,
-      'heart': <FontAwesome5 name="heart" size={size} color={color} />,
-      'credit-card': <FontAwesome5 name="credit-card" size={size} color={color} />,
-      'shopping-bag': <FontAwesome5 name="shopping-bag" size={size} color={color} />,
-      'bolt': <FontAwesome5 name="bolt" size={size} color={color} />,
-      'dollar-sign': <FontAwesome5 name="dollar-sign" size={size} color={color} />,
-      'music': <FontAwesome5 name="music" size={size} color={color} />,
-      'film': <FontAwesome5 name="film" size={size} color={color} />,
-      'book': <FontAwesome5 name="book" size={size} color={color} />,
-      'medkit': <FontAwesome5 name="medkit" size={size} color={color} />,
-      'paw': <FontAwesome5 name="paw" size={size} color={color} />,
-      'tshirt': <FontAwesome5 name="tshirt" size={size} color={color} />,
-      'mobile-alt': <FontAwesome5 name="mobile-alt" size={size} color={color} />,
-      'glass-cheers': <FontAwesome5 name="glass-cheers" size={size} color={color} />,
 
-      // MaterialIcons and Ionicons (legacy support)
-      'restaurant': <MaterialIcons name="restaurant" size={size} color={color} />,
-      'car-sport': <Ionicons name="car-sport" size={size} color={color} />,
-      'receipt': <MaterialIcons name="receipt" size={size} color={color} />,
-      'movie': <MaterialIcons name="movie" size={size} color={color} />,
-      'cash': <Ionicons name="cash" size={size} color={color} />,
-      'laptop': <Ionicons name="laptop" size={size} color={color} />,
-      'medical': <Ionicons name="medical" size={size} color={color} />,
-      'school': <Ionicons name="school" size={size} color={color} />,
-      'airplane': <Ionicons name="airplane" size={size} color={color} />,
-      'bus': <Ionicons name="bus" size={size} color={color} />,
-      'train': <Ionicons name="train" size={size} color={color} />,
-      'bicycle': <Ionicons name="bicycle" size={size} color={color} />,
-      'walk': <Ionicons name="walk" size={size} color={color} />,
-      'fitness': <Ionicons name="fitness" size={size} color={color} />,
-      'game-controller': <Ionicons name="game-controller" size={size} color={color} />,
-      'library': <Ionicons name="library" size={size} color={color} />,
-      'card': <Ionicons name="card" size={size} color={color} />,
-      'wallet': <Ionicons name="wallet" size={size} color={color} />,
-      'bank': <Ionicons name="business" size={size} color={color} />,
-      'phone': <Ionicons name="phone-portrait" size={size} color={color} />,
-      'wifi': <Ionicons name="wifi" size={size} color={color} />,
-      'electricity': <Ionicons name="flash" size={size} color={color} />,
-      'water': <Ionicons name="water" size={size} color={color} />,
-      'gas': <Ionicons name="flame" size={size} color={color} />,
-      'internet': <Ionicons name="globe" size={size} color={color} />,
-      'tv': <Ionicons name="tv" size={size} color={color} />,
-      'camera': <Ionicons name="camera" size={size} color={color} />,
-      'pizza': <Ionicons name="pizza" size={size} color={color} />,
-      'beer': <Ionicons name="beer" size={size} color={color} />,
-      'wine': <Ionicons name="wine" size={size} color={color} />,
-      'coffee': <Ionicons name="cafe" size={size} color={color} />,
-      'fast-food': <Ionicons name="fast-food" size={size} color={color} />,
-      'ice-cream': <Ionicons name="ice-cream" size={size} color={color} />,
-    };
-    return iconMap[iconName] || <MaterialIcons name="category" size={size} color={color} />;
-  };
 
   const generateCSV = (transactions: Transaction[]) => {
     const headers = 'Date,Description,Category,Type,Amount\n';
@@ -214,7 +157,7 @@ export default function Transactions() {
       const description = (tx.description || '').substring(0, 20).padEnd(20);
       const category = (tx.categoryName || 'Unknown').substring(0, 12).padEnd(12);
       const type = tx.type.padEnd(8);
-      const amount = `₹${tx.amount}`.padEnd(8);
+      const amount = `${currency}${tx.amount}`.padEnd(8);
 
       return `│ ${date} │ ${description} │ ${category} │ ${type} │ ${amount} │`;
     }).join('\n');
@@ -225,9 +168,9 @@ export default function Transactions() {
     const balance = totalIncome - totalExpense;
 
     const summary = `\n\nSUMMARY:\n`;
-    const summaryRow1 = `Total Income:  ₹${totalIncome.toLocaleString()}\n`;
-    const summaryRow2 = `Total Expense: ₹${totalExpense.toLocaleString()}\n`;
-    const summaryRow3 = `Balance:       ₹${balance.toLocaleString()}\n`;
+    const summaryRow1 = `Total Income:  ${currency}${totalIncome.toLocaleString()}\n`;
+    const summaryRow2 = `Total Expense: ${currency}${totalExpense.toLocaleString()}\n`;
+    const summaryRow3 = `Balance:       ${currency}${balance.toLocaleString()}\n`;
     const summaryRow4 = `Transactions:  ${transactions.length}\n`;
 
     return header + headerRow + separator + dataRows + '\n' + footer + summary + summaryRow1 + summaryRow2 + summaryRow3 + summaryRow4;
@@ -402,15 +345,15 @@ export default function Transactions() {
           <div class="summary">
             <div class="summary-card">
               <h3>Total Income</h3>
-              <div class="amount">₹${totalIncome.toLocaleString()}</div>
+              <div class="amount">${currency}${totalIncome.toLocaleString()}</div>
             </div>
             <div class="summary-card">
               <h3>Total Expense</h3>
-              <div class="amount">₹${totalExpense.toLocaleString()}</div>
+              <div class="amount">${currency}${totalExpense.toLocaleString()}</div>
             </div>
             <div class="summary-card">
               <h3>Balance</h3>
-              <div class="amount">₹${balance.toLocaleString()}</div>
+              <div class="amount">${currency}${balance.toLocaleString()}</div>
             </div>
           </div>
           
@@ -423,7 +366,7 @@ export default function Transactions() {
                   <div class="transaction-meta">${formatDateShort(tx.date)} • ${tx.categoryName || 'Unknown'}</div>
                 </div>
                 <div class="transaction-amount ${tx.type}">
-                  ${tx.type === 'income' ? '+' : '-'}₹${tx.amount.toLocaleString()}
+                  ${tx.type === 'income' ? '+' : '-'}${currency}${tx.amount.toLocaleString()}
                 </div>
               </div>
             `).join('') : `
@@ -450,7 +393,7 @@ export default function Transactions() {
     return htmlContent;
   };
 
-  const downloadFile = async (content: string, filename: string, mimeType: string) => {
+  const downloadFile = async (content: string, filename: string, mimeType: string, UTI?: string) => {
     try {
       const fileUri = `${FileSystem.documentDirectory}${filename}`;
       await FileSystem.writeAsStringAsync(fileUri, content);
@@ -458,6 +401,7 @@ export default function Transactions() {
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(fileUri, {
           mimeType,
+          UTI,
           dialogTitle: 'Download Transaction Report'
         });
       } else {
@@ -469,28 +413,36 @@ export default function Transactions() {
     }
   };
 
-  const handleDownloadCSV = async () => {
-    const csvContent = generateCSV(filteredTransactions);
-    await downloadFile(csvContent, 'transactions.csv', 'text/csv');
+  const handleDownloadCSV = () => {
     setShowDownload(false);
+    setTimeout(async () => {
+      const csvContent = generateCSV(filteredTransactions);
+      await downloadFile(csvContent, 'transactions.csv', 'text/csv', 'public.comma-separated-values-text');
+    }, 500);
   };
 
-  const handleDownloadPDF = async () => {
-    const pdfContent = generatePDF(filteredTransactions);
-    await downloadFile(pdfContent, 'transactions.txt', 'text/plain');
+  const handleDownloadPDF = () => {
     setShowDownload(false);
+    setTimeout(async () => {
+      const pdfContent = generatePDF(filteredTransactions);
+      await downloadFile(pdfContent, 'transactions.txt', 'text/plain', 'public.plain-text');
+    }, 500);
   };
 
-  const handleDownloadTable = async () => {
-    const tableContent = generateTable(filteredTransactions);
-    await downloadFile(tableContent, 'transactions_table.txt', 'text/plain');
+  const handleDownloadTable = () => {
     setShowDownload(false);
+    setTimeout(async () => {
+      const tableContent = generateTable(filteredTransactions);
+      await downloadFile(tableContent, 'transactions_table.txt', 'text/plain', 'public.plain-text');
+    }, 500);
   };
 
-  const handleDownloadImage = async () => {
-    const imageContent = generateImageContent(filteredTransactions);
-    await downloadFile(imageContent, 'transactions_report.html', 'text/html');
+  const handleDownloadImage = () => {
     setShowDownload(false);
+    setTimeout(async () => {
+      const imageContent = generateImageContent(filteredTransactions);
+      await downloadFile(imageContent, 'transactions_report.html', 'text/html', 'public.html');
+    }, 500);
   };
 
   // Filter and sort transactions
@@ -949,7 +901,7 @@ export default function Transactions() {
                       <Text style={styles.txDate}>{formatDateShort(item.date)}</Text>
                     </View>
                     <Text style={[styles.txAmount, { color: item.type === 'income' ? theme.success : theme.error }]}>
-                      {item.type === 'income' ? '+' : '-'}₹ {item.amount.toLocaleString()}
+                      {item.type === 'income' ? '+' : '-'}{currency} {item.amount.toLocaleString()}
                     </Text>
                   </TouchableOpacity>
 
@@ -968,7 +920,7 @@ export default function Transactions() {
             />
             <View style={styles.fixedTotalRow}>
               <Text style={styles.totalLabel}>Total ({filteredTransactions.length} transactions)</Text>
-              <Text style={styles.totalAmount}>₹ {totalAmount.toLocaleString()}</Text>
+              <Text style={styles.totalAmount}>{currency} {totalAmount.toLocaleString()}</Text>
             </View>
           </View>
         ) : (

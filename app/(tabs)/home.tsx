@@ -10,7 +10,9 @@ import { categoriesService, Category } from '../services/categoriesService';
 import { transactionsService, Transaction, TransactionStats } from '../services/transactionsService';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useCurrency } from '../context/CurrencyContext';
 import { formatDateShort } from '../utils/dateUtils';
+import { getIconComponent } from '../utils/iconUtils';
 import { getDoc, doc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { StatusBar } from 'expo-status-bar';
@@ -26,6 +28,7 @@ declare global {
 export default function Home() {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const { currency } = useCurrency();
   
   const [firebaseStatus, setFirebaseStatus] = useState<string>('Checking...');
   const [categories, setCategories] = useState<Category[]>([]);
@@ -383,68 +386,6 @@ export default function Home() {
     }, [user])
   );
 
-  const getIconComponent = (iconName: string, color: string, size: number = 24) => {
-    const iconMap: { [key: string]: any } = {
-      // FontAwesome5 icons (from manage categories)
-      'cart': <FontAwesome5 name="shopping-cart" size={size} color={color} />,
-      'car': <FontAwesome5 name="car" size={size} color={color} />,
-      'home': <FontAwesome5 name="home" size={size} color={color} />,
-      'utensils': <FontAwesome5 name="utensils" size={size} color={color} />,
-      'gamepad': <FontAwesome5 name="gamepad" size={size} color={color} />,
-      'plane': <FontAwesome5 name="plane" size={size} color={color} />,
-      'gift': <FontAwesome5 name="gift" size={size} color={color} />,
-      'heart': <FontAwesome5 name="heart" size={size} color={color} />,
-      'credit-card': <FontAwesome5 name="credit-card" size={size} color={color} />,
-      'shopping-bag': <FontAwesome5 name="shopping-bag" size={size} color={color} />,
-      'bolt': <FontAwesome5 name="bolt" size={size} color={color} />,
-      'dollar-sign': <FontAwesome5 name="dollar-sign" size={size} color={color} />,
-      'music': <FontAwesome5 name="music" size={size} color={color} />,
-      'film': <FontAwesome5 name="film" size={size} color={color} />,
-      'book': <FontAwesome5 name="book" size={size} color={color} />,
-      'medkit': <FontAwesome5 name="medkit" size={size} color={color} />,
-      'paw': <FontAwesome5 name="paw" size={size} color={color} />,
-      'tshirt': <FontAwesome5 name="tshirt" size={size} color={color} />,
-      'mobile-alt': <FontAwesome5 name="mobile-alt" size={size} color={color} />,
-      'glass-cheers': <FontAwesome5 name="glass-cheers" size={size} color={color} />,
-      
-      // MaterialIcons and Ionicons (legacy support)
-      'restaurant': <MaterialIcons name="restaurant" size={size} color={color} />,
-      'car-sport': <Ionicons name="car-sport" size={size} color={color} />,
-      'receipt': <MaterialIcons name="receipt" size={size} color={color} />,
-      'movie': <MaterialIcons name="movie" size={size} color={color} />,
-      'cash': <Ionicons name="cash" size={size} color={color} />,
-      'laptop': <Ionicons name="laptop" size={size} color={color} />,
-      'medical': <Ionicons name="medical" size={size} color={color} />,
-      'school': <Ionicons name="school" size={size} color={color} />,
-      'airplane': <Ionicons name="airplane" size={size} color={color} />,
-      'bus': <Ionicons name="bus" size={size} color={color} />,
-      'train': <Ionicons name="train" size={size} color={color} />,
-      'bicycle': <Ionicons name="bicycle" size={size} color={color} />,
-      'walk': <Ionicons name="walk" size={size} color={color} />,
-      'fitness': <Ionicons name="fitness" size={size} color={color} />,
-      'game-controller': <Ionicons name="game-controller" size={size} color={color} />,
-      'library': <Ionicons name="library" size={size} color={color} />,
-      'card': <Ionicons name="card" size={size} color={color} />,
-      'wallet': <Ionicons name="wallet" size={size} color={color} />,
-      'bank': <Ionicons name="business" size={size} color={color} />,
-      'phone': <Ionicons name="phone-portrait" size={size} color={color} />,
-      'wifi': <Ionicons name="wifi" size={size} color={color} />,
-      'electricity': <Ionicons name="flash" size={size} color={color} />,
-      'water': <Ionicons name="water" size={size} color={color} />,
-      'gas': <Ionicons name="flame" size={size} color={color} />,
-      'internet': <Ionicons name="globe" size={size} color={color} />,
-      'tv': <Ionicons name="tv" size={size} color={color} />,
-      'camera': <Ionicons name="camera" size={size} color={color} />,
-      'pizza': <Ionicons name="pizza" size={size} color={color} />,
-      'beer': <Ionicons name="beer" size={size} color={color} />,
-      'wine': <Ionicons name="wine" size={size} color={color} />,
-      'coffee': <Ionicons name="cafe" size={size} color={color} />,
-      'fast-food': <Ionicons name="fast-food" size={size} color={color} />,
-      'ice-cream': <Ionicons name="ice-cream" size={size} color={color} />,
-    };
-    return iconMap[iconName] || <MaterialIcons name="category" size={size} color={color} />;
-  };
-
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchData();
@@ -496,7 +437,7 @@ export default function Home() {
           colors={['#002219', '#008361', '#002219']}
           style={styles.balanceCard}
         >
-          <Text style={[styles.balanceLabel, { color: theme.background === '#121212' ? theme.text : '#FFFFFF' }]}>₹ {stats.balance.toLocaleString()}</Text>
+          <Text style={[styles.balanceLabel, { color: theme.background === '#121212' ? theme.text : '#FFFFFF' }]}>{currency} {stats.balance.toLocaleString()}</Text>
           <Text style={[styles.balanceSub, { color: theme.background === '#121212' ? theme.textSecondary : '#FFFFFF', opacity: 0.9 }]}>Balance</Text>
           <Text style={[styles.balanceSub, { fontSize: 12, marginBottom: 8, color: theme.background === '#121212' ? theme.textSecondary : '#FFFFFF', opacity: 0.8 }]}>
             Spending Progress: {getProgressPercentage().toFixed(1)}% of income
@@ -515,11 +456,11 @@ export default function Home() {
           <View style={styles.balanceRow}>
             <View style={styles.balanceCol}>
               <Text style={[styles.balanceMiniLabel, { color: theme.background === '#121212' ? theme.textSecondary : '#FFFFFF', opacity: 0.8 }]}>Income</Text>
-              <Text style={[styles.balanceMiniValue, { color: theme.background === '#121212' ? theme.text : '#FFFFFF' }]}>₹ {stats.totalIncome.toLocaleString()}</Text>
+              <Text style={[styles.balanceMiniValue, { color: theme.background === '#121212' ? theme.text : '#FFFFFF' }]}>{currency} {stats.totalIncome.toLocaleString()}</Text>
             </View>
             <View style={styles.balanceCol}>
               <Text style={[styles.balanceMiniLabel, { color: theme.background === '#121212' ? theme.textSecondary : '#FFFFFF', opacity: 0.8 }]}>Expenditure</Text>
-              <Text style={[styles.balanceMiniValue, { color: theme.background === '#121212' ? theme.text : '#FFFFFF' }]}>₹ {stats.totalExpense.toLocaleString()}</Text>
+              <Text style={[styles.balanceMiniValue, { color: theme.background === '#121212' ? theme.text : '#FFFFFF' }]}>{currency} {stats.totalExpense.toLocaleString()}</Text>
             </View>
             <View style={styles.balanceCol}>
               <Text style={[styles.balanceMiniLabel, { color: theme.background === '#121212' ? theme.textSecondary : '#FFFFFF', opacity: 0.8 }]}>Transactions</Text>
@@ -539,7 +480,7 @@ export default function Home() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.categoryLabel}>{cat.name}</Text>
-                  <Text style={styles.categoryAmount}>₹ {categorySpending[cat.id || '']?.toLocaleString() || '0'}</Text>
+                  <Text style={styles.categoryAmount}>{currency} {categorySpending[cat.id || '']?.toLocaleString() || '0'}</Text>
                 </View>
               </View>
             ))}
@@ -577,7 +518,7 @@ export default function Home() {
                     <Text style={styles.transactionSubtitle}>{tx.categoryName} · {formatDateShort(tx.date)}</Text>
                   </View>
                   <Text style={[styles.transactionAmount, { color: tx.type === 'income' ? theme.success : theme.error }]}>
-                    {tx.type === 'income' ? '+' : '-'}₹ {tx.amount.toLocaleString()}
+                    {tx.type === 'income' ? '+' : '-'}{currency} {tx.amount.toLocaleString()}
                   </Text>
                 </View>
                 {idx !== transactions.length - 1 && (

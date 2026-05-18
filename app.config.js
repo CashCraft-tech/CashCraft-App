@@ -4,7 +4,7 @@
 
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+require('dotenv').config({ path: path.resolve(__dirname, '.env'), quiet: true });
 
 const googleServicesPath =
   process.env.GOOGLE_SERVICES_JSON || './google-services.json';

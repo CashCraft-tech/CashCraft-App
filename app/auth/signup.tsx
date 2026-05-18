@@ -6,6 +6,7 @@ import { db } from '../firebaseConfig';
 import { authService } from "../services/authService";
 import { categoriesService } from '../services/categoriesService';
 import { navigateToAppHome } from '../utils/navigation';
+import { validationUtils } from '../utils/validationUtils';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -61,6 +62,31 @@ export default function Signup() {
     // Validation
     if (!form.fullName.trim() || !form.email.trim() || !form.password.trim()) {
       setError('Please fill in all required fields');
+      return;
+    }
+
+    if (!validationUtils.validateName(form.fullName)) {
+      setError('Please enter a valid full name (letters only)');
+      return;
+    }
+
+    if (form.phone && !validationUtils.validatePhone(form.phone)) {
+      setError('Please enter a valid phone number (10-15 digits)');
+      return;
+    }
+
+    if (form.profession && !validationUtils.validateName(form.profession)) {
+      setError('Please enter a valid profession (letters only)');
+      return;
+    }
+
+    if (form.username && !validationUtils.validateUsername(form.username)) {
+      setError('Username must be 3-20 characters long and contain only letters, numbers, or underscores');
+      return;
+    }
+
+    if (!authService.validateEmail(form.email.trim())) {
+      setError('Please enter a valid email address with a supported domain (e.g., gmail.com, outlook.com)');
       return;
     }
     
