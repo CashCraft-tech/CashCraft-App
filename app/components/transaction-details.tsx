@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
+import React, { useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Modal, Dimensions, ActivityIndicator } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -31,13 +31,18 @@ export type Transaction = {
   payment?: string;
   breakdown?: { label: string; amount: number }[];
   receipt?: boolean;
+  receiptUrl?: string;
   iconName?: string;
   iconColor?: string;
 };
 
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
 export default function TransactionDetails() {
   const { theme } = useTheme();
   const { transaction } = useLocalSearchParams();
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [receiptLoading, setReceiptLoading] = useState(true);
   let tx: Transaction | null = null;
   try {
     tx = transaction ? JSON.parse(transaction as string) : null;
@@ -394,6 +399,75 @@ export default function TransactionDetails() {
       fontSize: 15, 
       fontFamily: 'Poppins' 
     },
+    receiptCard: {
+      backgroundColor: theme.card,
+      borderRadius: 16,
+      padding: 18,
+      marginBottom: 18,
+      shadowColor: '#000',
+      shadowOpacity: 0.04,
+      shadowRadius: 4,
+      shadowOffset: { width: 0, height: 1 },
+      elevation: 1,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    receiptTitle: {
+      fontWeight: 'bold',
+      color: theme.text,
+      fontSize: 15,
+      marginBottom: 12,
+      fontFamily: 'Poppins',
+    },
+    receiptImage: {
+      width: '100%',
+      height: 200,
+      borderRadius: 12,
+      backgroundColor: theme.surface,
+    },
+    viewFullBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 12,
+      paddingVertical: 10,
+      backgroundColor: theme.touchable,
+      borderRadius: 10,
+      gap: 6,
+    },
+    viewFullBtnText: {
+      color: theme.primary,
+      fontWeight: 'bold',
+      fontSize: 14,
+    },
+    receiptModalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.92)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    receiptModalClose: {
+      position: 'absolute',
+      top: 60,
+      right: 20,
+      zIndex: 10,
+      backgroundColor: 'rgba(255,255,255,0.15)',
+      borderRadius: 20,
+      padding: 8,
+    },
+    receiptModalImage: {
+      width: screenWidth - 40,
+      height: screenHeight * 0.7,
+      borderRadius: 12,
+    },
+    receiptLoadingContainer: {
+      width: '100%',
+      height: 200,
+      borderRadius: 12,
+      backgroundColor: theme.surface,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
   });
 
   return (
@@ -485,10 +559,61 @@ export default function TransactionDetails() {
             </View>
           </View>
         )}
-        {/* <TouchableOpacity style={styles.receiptBtn}>
-          <Text style={styles.receiptBtnText}>View Receipt</Text>
-        </TouchableOpacity> */}
+
+        {/* Receipt Section */}
+        {tx.receiptUrl ? (
+          <View style={styles.receiptCard}>
+            <Text style={styles.receiptTitle}>📎 Receipt</Text>
+            <View>
+              {receiptLoading && (
+                <View style={styles.receiptLoadingContainer}>
+                  <ActivityIndicator size="large" color={theme.primary} />
+                  <Text style={{ color: theme.textSecondary, marginTop: 8, fontSize: 13 }}>Loading receipt...</Text>
+                </View>
+              )}
+              <Image
+                source={{ uri: tx.receiptUrl }}
+                style={[styles.receiptImage, receiptLoading ? { position: 'absolute', opacity: 0 } : {}]}
+                resizeMode="cover"
+                onLoadEnd={() => setReceiptLoading(false)}
+              />
+            </View>
+            <TouchableOpacity style={styles.viewFullBtn} onPress={() => setShowReceiptModal(true)}>
+              <Ionicons name="expand-outline" size={18} color={theme.primary} />
+              <Text style={styles.viewFullBtnText}>View Full Size</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.receiptCard}>
+            <Text style={styles.receiptTitle}>📎 Receipt</Text>
+            <View style={{ alignItems: 'center', paddingVertical: 16 }}>
+              <Ionicons name="receipt-outline" size={36} color={theme.textTertiary} />
+              <Text style={{ color: theme.textSecondary, fontSize: 14, marginTop: 8 }}>No receipt attached</Text>
+            </View>
+          </View>
+        )}
       </ScrollView>
+
+      {/* Fullscreen Receipt Modal */}
+      <Modal
+        visible={showReceiptModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowReceiptModal(false)}
+      >
+        <View style={styles.receiptModalOverlay}>
+          <TouchableOpacity style={styles.receiptModalClose} onPress={() => setShowReceiptModal(false)}>
+            <Ionicons name="close" size={28} color="#fff" />
+          </TouchableOpacity>
+          {tx.receiptUrl && (
+            <Image
+              source={{ uri: tx.receiptUrl }}
+              style={styles.receiptModalImage}
+              resizeMode="contain"
+            />
+          )}
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 } 

@@ -42,6 +42,7 @@ export interface Transaction {
   notes?: string;
   payment?: string; // Payment method (Cash, Credit Card, etc.)
   time?: string; // Time in HH:MM format
+  receiptUrl?: string; // URL for the receipt image
   createdAt?: any;
   updatedAt?: any;
 }

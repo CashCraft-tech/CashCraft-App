@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, FlatList, Platform, Alert, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, FlatList, Platform, Alert, ActivityIndicator, Image } from "react-native";
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { categoriesService, Category } from '../services/categoriesService';
 import { transactionsService } from '../services/transactionsService';
+import { cloudinaryService } from '../services/cloudinaryService';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { router } from 'expo-router';
@@ -185,6 +187,58 @@ export default function Add() {
     return formatted;
   }
 
+  const handleAddReceipt = () => {
+    if (receipt) {
+      Alert.alert(
+        "Receipt Options",
+        "What would you like to do?",
+        [
+          { text: "Remove Receipt", onPress: () => setReceipt(null), style: "destructive" },
+          { text: "Cancel", style: "cancel" }
+        ]
+      );
+      return;
+    }
+
+    Alert.alert(
+      "Add Receipt",
+      "Choose an option",
+      [
+        {
+          text: "Camera",
+          onPress: async () => {
+            const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+            if (permissionResult.granted === false) {
+              Alert.alert("Permission required", "You've refused to allow this app to access your camera!");
+              return;
+            }
+            const result = await ImagePicker.launchCameraAsync({
+              allowsEditing: true,
+              quality: 0.8,
+            });
+            if (!result.canceled) {
+              setReceipt(result.assets[0].uri);
+            }
+          }
+        },
+        {
+          text: "Gallery",
+          onPress: async () => {
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ['images'],
+              allowsEditing: true,
+              quality: 0.8,
+            });
+            if (!result.canceled) {
+              setReceipt(result.assets[0].uri);
+            }
+          }
+        },
+        { text: "Cancel", style: "cancel" }
+      ]
+    );
+  };
+
   // Save transaction to Firebase
   const handleSaveTransaction = async () => {
     if (!user?.uid || !selectedCategory) return;
@@ -195,6 +249,17 @@ export default function Add() {
       const [dd, mm, yyyy] = date.split('-');
       const [hh, mm_time] = time.split(':');
       const transactionDate = new Date(parseInt(yyyy), parseInt(mm) - 1, parseInt(dd), parseInt(hh), parseInt(mm_time), 0, 0);
+
+      let uploadedReceiptUrl = undefined;
+      
+      if (receipt) {
+        try {
+          uploadedReceiptUrl = await cloudinaryService.uploadImage(receipt);
+        } catch (error) {
+          Alert.alert('Upload Failed', 'Failed to upload receipt to Cloudinary. Saving transaction without receipt.');
+          console.error(error);
+        }
+      }
 
       const transaction = {
         userId: user.uid,
@@ -209,6 +274,7 @@ export default function Add() {
         notes: description,
         payment: paymentType || 'Not specified',
         time: time, // Store time separately for easier access
+        ...(uploadedReceiptUrl ? { receiptUrl: uploadedReceiptUrl } : {}),
       };
 
       await transactionsService.addTransaction(transaction);
@@ -224,6 +290,7 @@ export default function Add() {
       setPaymentType(null);
       setSelectedCategory(null);
       setCategory(null);
+      setReceipt(null);
     } catch (error) {
       console.error('Error saving transaction:', error);
       Alert.alert('Error', 'Failed to save transaction');
@@ -390,15 +457,18 @@ export default function Add() {
           {/* Receipt Upload */}
           <Text style={styles.label}>Receipt <Text style={{ color: theme.textSecondary }}>(Optional)</Text></Text>
           <TouchableOpacity 
-            style={styles.receiptBox}
-            onPress={() => Alert.alert('Feature Coming Soon!', 'Receipt upload functionality will be available in the next update.')}
+            style={[styles.receiptBox, receipt ? { padding: 0, overflow: 'hidden', borderWidth: 0 } : {}]}
+            onPress={handleAddReceipt}
           >
-            <Ionicons name="cloud-upload-outline" size={32} color={theme.textSecondary} />
-            <Text style={styles.receiptText}>Add Receipt</Text>
-            <Text style={styles.receiptSub}>Take a photo or upload from gallery</Text>
-            <View style={styles.comingSoonBadge}>
-              <Text style={styles.comingSoonText}>Coming Soon!</Text>
-            </View>
+            {receipt ? (
+              <Image source={{ uri: receipt }} style={{ width: '100%', height: 200, borderRadius: 12 }} resizeMode="cover" />
+            ) : (
+              <>
+                <Ionicons name="cloud-upload-outline" size={32} color={theme.textSecondary} />
+                <Text style={styles.receiptText}>Add Receipt</Text>
+                <Text style={styles.receiptSub}>Take a photo or upload from gallery</Text>
+              </>
+            )}
           </TouchableOpacity>
 
           {/* Action Buttons */}
