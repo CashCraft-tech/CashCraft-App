@@ -4,6 +4,7 @@
 
 const fs = require('fs');
 const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
 const googleServicesPath =
   process.env.GOOGLE_SERVICES_JSON || './google-services.json';
@@ -75,6 +76,16 @@ module.exports = () => ({
       eas: {
         projectId: 'e9b9481b-8889-42b9-a96f-87f0961cbe8d',
       },
+      // Firebase config (loaded from .env)
+      firebaseApiKey: process.env.FIREBASE_API_KEY,
+      firebaseAuthDomain: process.env.FIREBASE_AUTH_DOMAIN,
+      firebaseProjectId: process.env.FIREBASE_PROJECT_ID,
+      firebaseStorageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+      firebaseMessagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
+      firebaseAppId: process.env.FIREBASE_APP_ID,
+      // Cloudinary config (loaded from .env)
+      cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME,
+      cloudinaryUploadPreset: process.env.CLOUDINARY_UPLOAD_PRESET,
     },
     owner: 'prasad19',
   },

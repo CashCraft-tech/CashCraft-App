@@ -8,14 +8,18 @@ import { getFirestore, collection } from 'firebase/firestore';
 import { getMessaging, isSupported } from 'firebase/messaging';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
+
+// Read Firebase config from app.config.js extra (sourced from .env)
+const extra = Constants.expoConfig?.extra ?? {};
 
 const firebaseConfig = {
-  apiKey: 'AIzaSyBIMqCgK2yZtwuuye9IKhdghK7VsJ5RCh8',
-  authDomain: 'cashcraft-c8a02.firebaseapp.com',
-  projectId: 'cashcraft-c8a02',
-  storageBucket: 'cashcraft-c8a02.firebasestorage.app',
-  messagingSenderId: '930540132801',
-  appId: '1:930540132801:android:54571d7d7d6fecdbad7740',
+  apiKey: extra.firebaseApiKey,
+  authDomain: extra.firebaseAuthDomain,
+  projectId: extra.firebaseProjectId,
+  storageBucket: extra.firebaseStorageBucket,
+  messagingSenderId: extra.firebaseMessagingSenderId,
+  appId: extra.firebaseAppId,
 };
 
 export const app = initializeApp(firebaseConfig);

@@ -1,15 +1,17 @@
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
 const { initializeApp } = require('firebase/app');
 const { getFirestore, collection, addDoc, serverTimestamp } = require('firebase/firestore');
 const { getAuth, signInWithEmailAndPassword } = require('firebase/auth');
 
-// Firebase configuration (same as in your app)
+// Firebase configuration (loaded from .env)
 const firebaseConfig = {
-  apiKey: "AIzaSyBAQp3DAHj-16bmWi9JwbnEvpfmXKhySoI",
-  authDomain: "bachat-991f9.firebaseapp.com",
-  projectId: "bachat-991f9",
-  storageBucket: "bachat-991f9.firebasestorage.app",
-  messagingSenderId: "888504934769",
-  appId: "1:888504934769:android:ebf8927e8ab117606156d0"
+  apiKey: process.env.FIREBASE_API_KEY,
+  authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.FIREBASE_PROJECT_ID,
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.FIREBASE_APP_ID,
 };
 
 // Initialize Firebase
