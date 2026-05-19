@@ -3,7 +3,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { router, useFocusEffect } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import ViewShot from 'react-native-view-shot';
 import { Alert, Dimensions, FlatList, Modal, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View, Image } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -38,6 +38,7 @@ export default function Transactions() {
   const { user } = useAuth();
   const { theme } = useTheme();
   const { currency } = useCurrency();
+  const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('newest');
@@ -91,25 +92,41 @@ export default function Transactions() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
+            const queryKey = ['transactions', user?.uid];
+            const previousTransactions = queryClient.getQueryData<Transaction[]>(queryKey);
+
+            // Optimistically update UI by removing the transaction from cache immediately
+            if (previousTransactions) {
+              queryClient.setQueryData(
+                queryKey,
+                previousTransactions.filter(t => t.id !== transaction.id)
+              );
+            }
+
             try {
+              // Perform deletion on Firestore in the background
               await transactionsService.deleteTransaction(transaction.id!);
 
-              // To update local state when using React Query, we invalidate the query or let the optimistic update handle it. 
-              // Since we are refetching on focus, and deleting, we can either call refetch() or just let the cache update.
-              // For a simple approach, we can force a refetch:
-              await refetch();
+              // Silently invalidate queries in the background to ensure data sync
+              queryClient.invalidateQueries({ queryKey });
+              queryClient.invalidateQueries({ queryKey: ['homeData', user?.uid] });
 
-              // Show success notification
+              // Show success notification asynchronously
               Alert.alert('Success', 'Transaction deleted successfully');
 
-              // Send notification
-              await notificationService.sendLocalNotification(
+              // Send notification in the background
+              notificationService.sendLocalNotification(
                 'Transaction Deleted',
                 `"${transaction.description}" has been removed from your records.`,
                 { type: 'transaction_deleted', icon: 'trash-outline' }
-              );
+              ).catch(console.error);
+
             } catch (error) {
               console.error('Error deleting transaction:', error);
+              // Rollback to previous state on failure
+              if (previousTransactions) {
+                queryClient.setQueryData(queryKey, previousTransactions);
+              }
               Alert.alert('Error', 'Failed to delete transaction. Please try again.');
             }
           },

@@ -16,6 +16,7 @@ import { getIconComponent } from '../utils/iconUtils';
 import { Picker } from '@react-native-picker/picker';
 import { router } from 'expo-router';
 import { notificationService } from '../services/notificationService';
+import { useQueryClient } from '@tanstack/react-query';
 
 const PAYMENT_TYPES = [
   { label: 'Cash', icon: <FontAwesome5 name="money-bill-wave" size={20} color="#43A047" /> },
@@ -29,6 +30,7 @@ export default function Add() {
   const { user } = useAuth();
   const { theme } = useTheme();
   const { currency } = useCurrency();
+  const queryClient = useQueryClient();
   
   const styles = StyleSheet.create({
     scrollContent: { 
@@ -266,59 +268,107 @@ export default function Add() {
       return;
     }
 
-    setLoading(true);
     try {
       // Parse date and time
       const [dd, mm, yyyy] = date.split('-');
       const [hh, mm_time] = time.split(':');
       const transactionDate = new Date(parseInt(yyyy), parseInt(mm) - 1, parseInt(dd), parseInt(hh), parseInt(mm_time), 0, 0);
 
-      let uploadedReceiptUrl = undefined;
-      
-      if (receipt) {
-        try {
-          uploadedReceiptUrl = await cloudinaryService.uploadImage(receipt);
-        } catch (error) {
-          Alert.alert('Upload Failed', 'Failed to upload receipt to Cloudinary. Saving transaction without receipt.');
-          console.error(error);
-        }
-      }
+      const transactionAmount = parseFloat(amount);
+      const transactionTypeStr = (transactionType === 'Expense' ? 'expense' : 'income') as 'expense' | 'income';
+      const optimisticId = 'temp-' + Date.now();
+      const queryKey = ['transactions', user.uid];
 
-      const transaction = {
+      // 1. Construct optimistic transaction
+      const optimisticTx = {
+        id: optimisticId,
         userId: user.uid,
         categoryId: selectedCategory.id!,
         categoryName: selectedCategory.name,
         categoryIcon: selectedCategory.icon,
         categoryColor: selectedCategory.color,
-        amount: parseFloat(amount),
-        type: (transactionType === 'Expense' ? 'expense' : 'income') as 'expense' | 'income',
+        amount: transactionAmount,
+        type: transactionTypeStr,
         description: title,
         date: transactionDate,
         notes: description,
         payment: paymentType || 'Not specified',
-        time: time, // Store time separately for easier access
-        ...(uploadedReceiptUrl ? { receiptUrl: uploadedReceiptUrl } : {}),
+        time: time,
+        receiptUrl: receipt || undefined, // local URI shown temporarily
       };
 
-      await transactionsService.addTransaction(transaction);
-      // No notification for transaction added - only low balance alerts
-      Alert.alert('Success', 'Transaction added successfully!');
+      // 2. Optimistically append new transaction to the local cache list
+      const previousTransactions = queryClient.getQueryData<any[]>(queryKey) || [];
+      queryClient.setQueryData(queryKey, [optimisticTx, ...previousTransactions]);
 
-      // Reset form but keep current date and time
+      // 3. Reset form inputs immediately to make UI feel snappy
       setAmount('');
       setTitle('');
       setDescription('');
-      setDate(getTodayDate()); // Keep current date
-      setTime(getCurrentTime()); // Keep current time
+      setDate(getTodayDate());
+      setTime(getCurrentTime());
       setPaymentType(null);
       setSelectedCategory(null);
       setCategory(null);
       setReceipt(null);
+
+      // 4. Prompt the user immediately
+      Alert.alert('Success', 'Transaction added successfully!');
+
+      // 5. Trigger network requests (Cloudinary upload & Firestore write) in the background
+      (async () => {
+        try {
+          let uploadedReceiptUrl = undefined;
+          
+          if (receipt) {
+            try {
+              uploadedReceiptUrl = await cloudinaryService.uploadImage(receipt);
+            } catch (uploadError) {
+              console.error('Background receipt upload failed:', uploadError);
+              // Save without receipt if upload fails
+            }
+          }
+
+          const dbTransaction = {
+            userId: user.uid,
+            categoryId: selectedCategory.id!,
+            categoryName: selectedCategory.name,
+            categoryIcon: selectedCategory.icon,
+            categoryColor: selectedCategory.color,
+            amount: transactionAmount,
+            type: transactionTypeStr,
+            description: title,
+            date: transactionDate,
+            notes: description,
+            payment: paymentType || 'Not specified',
+            time: time,
+            ...(uploadedReceiptUrl ? { receiptUrl: uploadedReceiptUrl } : {}),
+          };
+
+          await transactionsService.addTransaction(dbTransaction);
+
+          // Force background refetch to sync actual database records (real IDs & remote URLs)
+          queryClient.invalidateQueries({ queryKey });
+          queryClient.invalidateQueries({ queryKey: ['homeData', user.uid] });
+
+        } catch (backgroundError) {
+          console.error('Background transaction save failed:', backgroundError);
+          
+          // Rollback optimistic transaction from list
+          const currentTxs = queryClient.getQueryData<any[]>(queryKey) || [];
+          queryClient.setQueryData(queryKey, currentTxs.filter(t => t.id !== optimisticId));
+          
+          // Invalidate queries to ensure sync
+          queryClient.invalidateQueries({ queryKey });
+          queryClient.invalidateQueries({ queryKey: ['homeData', user.uid] });
+
+          Alert.alert('Save Failed', `Failed to save transaction "${title}". Please try again.`);
+        }
+      })();
+
     } catch (error) {
-      console.error('Error saving transaction:', error);
-      Alert.alert('Error', 'Failed to save transaction');
-    } finally {
-      setLoading(false);
+      console.error('Error starting transaction save:', error);
+      Alert.alert('Error', 'Failed to initiate saving transaction');
     }
   };
 
@@ -484,7 +534,7 @@ export default function Add() {
 
           {/* Action Buttons */}
           <View style={styles.actionRow}>
-            <TouchableOpacity style={styles.cancelBtn}>
+            <TouchableOpacity style={styles.cancelBtn} onPress={() => router.push('/(tabs)/home')}>
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.saveBtn, !canSave && { backgroundColor: theme.border }]} disabled={!canSave || loading} onPress={handleSaveTransaction}>

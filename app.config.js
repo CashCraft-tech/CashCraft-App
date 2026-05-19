@@ -15,7 +15,7 @@ module.exports = () => ({
   expo: {
     name: 'CashCraft',
     slug: 'bachat',
-    version: '1.0.0',
+    version: '1.1.0',
     icon: './assets/images/icon.png',
     orientation: 'portrait',
     scheme: 'cashcraft',
@@ -32,11 +32,12 @@ module.exports = () => ({
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.cashcraft.app',
+      buildNumber: '10',
     },
     android: {
       package: 'com.cashcraft.com',
       ...(hasGoogleServices && { googleServicesFile: googleServicesPath }),
-      versionCode: 1,
+      versionCode: 10,
       adaptiveIcon: {
         foregroundImage: './assets/images/adaptive-icon.png',
         backgroundColor: '#004F3A',
