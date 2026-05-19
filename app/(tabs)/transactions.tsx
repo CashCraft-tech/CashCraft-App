@@ -314,7 +314,9 @@ export default function Transactions() {
       }
     });
 
-  const totalAmount = filteredTransactions.reduce((sum, tx) => sum + tx.amount, 0);
+  const totalAmount = filteredTransactions.reduce((sum, tx) => {
+    return tx.type === 'income' ? sum + tx.amount : sum - tx.amount;
+  }, 0);
 
   // Get unique categories from actual transaction data
   const getUniqueCategories = () => {
@@ -730,8 +732,10 @@ export default function Transactions() {
               }
             />
             <View style={styles.fixedTotalRow}>
-              <Text style={styles.totalLabel}>Total ({filteredTransactions.length} transactions)</Text>
-              <Text style={styles.totalAmount}>{currency} {totalAmount.toLocaleString()}</Text>
+              <Text style={styles.totalLabel}>Net Balance ({filteredTransactions.length} transactions)</Text>
+              <Text style={[styles.totalAmount, { color: totalAmount >= 0 ? theme.success : theme.error }]}>
+                {totalAmount >= 0 ? `${currency}${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `-${currency}${Math.abs(totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              </Text>
             </View>
           </View>
         ) : (
@@ -948,8 +952,8 @@ export default function Transactions() {
             
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, paddingHorizontal: 4 }}>
               <Text style={{ fontSize: 15, fontWeight: '800', color: '#111827', textTransform: 'uppercase' }}>Net Balance</Text>
-              <Text style={{ fontSize: 16, fontWeight: '800', color: '#111827' }}>
-                {currency}{totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              <Text style={{ fontSize: 16, fontWeight: '800', color: totalAmount >= 0 ? '#059669' : '#DC2626' }}>
+                {totalAmount >= 0 ? `${currency}${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `-${currency}${Math.abs(totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
               </Text>
             </View>
             
