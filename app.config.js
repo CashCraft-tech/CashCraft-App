@@ -16,6 +16,7 @@ module.exports = () => ({
     name: 'CashCraft',
     slug: 'bachat',
     version: '1.0.0',
+    icon: './assets/images/icon.png',
     orientation: 'portrait',
     scheme: 'cashcraft',
     userInterfaceStyle: 'light',

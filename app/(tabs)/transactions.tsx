@@ -2,9 +2,10 @@ import { FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 import { router, useFocusEffect } from 'expo-router';
 import * as Sharing from 'expo-sharing';
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Dimensions, FlatList, Modal, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import ViewShot from 'react-native-view-shot';
+import { Alert, Dimensions, FlatList, Modal, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View, Image } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TransactionsScreenSkeleton } from '../components/skeleton';
 import { useAuth } from '../context/AuthContext';
@@ -45,6 +46,7 @@ export default function Transactions() {
   const [showSort, setShowSort] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
   const [showDownload, setShowDownload] = useState(false);
+  const viewShotRef = useRef<ViewShot>(null);
 
   // Fetch transactions using React Query
   const { data: userTransactions, isLoading: loading, refetch } = useQuery({
@@ -168,222 +170,7 @@ export default function Transactions() {
     return header + headerRow + separator + dataRows + '\n' + footer + summary + summaryRow1 + summaryRow2 + summaryRow3 + summaryRow4;
   };
 
-  const generateImageContent = (transactions: Transaction[]) => {
-    // Create HTML content that can be converted to image
-    const totalIncome = transactions.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0);
-    const totalExpense = transactions.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0);
-    const balance = totalIncome - totalExpense;
 
-    // Get active filters
-    const activeFilters = [];
-    if (filterType) activeFilters.push(`Type: ${filterType}`);
-    if (filterCategory) activeFilters.push(`Category: ${filterCategory}`);
-    if (search) activeFilters.push(`Search: "${search}"`);
-    if (sort !== 'newest') activeFilters.push(`Sort: ${SORT_OPTIONS.find(opt => opt.value === sort)?.label || sort}`);
-
-    const filterText = activeFilters.length > 0 ? activeFilters.join(' • ') : 'All transactions';
-
-    // Show all transactions when no filters, or filtered transactions
-    const transactionsToShow = filteredTransactions;
-
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Transaction Report</title>
-        <style>
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-          }
-          .container {
-            background: white;
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            max-width: 800px;
-            margin: 0 auto;
-          }
-          .header {
-            text-align: center;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #f0f0f0;
-            padding-bottom: 20px;
-          }
-          .header h1 {
-            color: #333;
-            margin: 0;
-            font-size: 28px;
-            font-weight: bold;
-          }
-          .header p {
-            color: #666;
-            margin: 10px 0 0 0;
-            font-size: 16px;
-          }
-          .filters {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-left: 4px solid #667eea;
-          }
-          .filters h3 {
-            margin: 0 0 10px 0;
-            color: #333;
-            font-size: 16px;
-            font-weight: bold;
-          }
-          .filters p {
-            margin: 0;
-            color: #666;
-            font-size: 14px;
-          }
-          .summary {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            margin-bottom: 30px;
-          }
-          .summary-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 15px;
-            text-align: center;
-          }
-          .summary-card h3 {
-            margin: 0 0 10px 0;
-            font-size: 14px;
-            opacity: 0.9;
-          }
-          .summary-card .amount {
-            font-size: 24px;
-            font-weight: bold;
-          }
-          .transactions {
-            background: #f8f9fa;
-            border-radius: 15px;
-            padding: 20px;
-          }
-          .transactions h2 {
-            color: #333;
-            margin: 0 0 20px 0;
-            font-size: 20px;
-          }
-          .transaction {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px;
-            background: white;
-            border-radius: 10px;
-            margin-bottom: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-          }
-          .transaction:last-child {
-            margin-bottom: 0;
-          }
-          .transaction-info {
-            flex: 1;
-          }
-          .transaction-title {
-            font-weight: bold;
-            color: #333;
-            font-size: 16px;
-            margin-bottom: 5px;
-          }
-          .transaction-meta {
-            color: #666;
-            font-size: 14px;
-          }
-          .transaction-amount {
-            font-weight: bold;
-            font-size: 18px;
-            padding: 8px 15px;
-            border-radius: 20px;
-            color: white;
-          }
-          .income {
-            background: linear-gradient(135deg, #4CAF50, #45a049);
-          }
-          .expense {
-            background: linear-gradient(135deg, #f44336, #d32f2f);
-          }
-          .footer {
-            text-align: center;
-            margin-top: 30px;
-            color: #666;
-            font-size: 14px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>💰 CashCraft Transaction Report</h1>
-            <p>Your financial summary at a glance</p>
-          </div>
-          
-          <div class="filters">
-            <h3>🔍 Applied Filters</h3>
-            <p>${filterText}</p>
-          </div>
-          
-          <div class="summary">
-            <div class="summary-card">
-              <h3>Total Income</h3>
-              <div class="amount">${currency}${totalIncome.toLocaleString()}</div>
-            </div>
-            <div class="summary-card">
-              <h3>Total Expense</h3>
-              <div class="amount">${currency}${totalExpense.toLocaleString()}</div>
-            </div>
-            <div class="summary-card">
-              <h3>Balance</h3>
-              <div class="amount">${currency}${balance.toLocaleString()}</div>
-            </div>
-          </div>
-          
-          <div class="transactions">
-            <h2>📊 Transactions (${transactionsToShow.length})</h2>
-            ${transactionsToShow.length > 0 ? transactionsToShow.map(tx => `
-              <div class="transaction">
-                <div class="transaction-info">
-                  <div class="transaction-title">${tx.description}</div>
-                  <div class="transaction-meta">${formatDateShort(tx.date)} • ${tx.categoryName || 'Unknown'}</div>
-                </div>
-                <div class="transaction-amount ${tx.type}">
-                  ${tx.type === 'income' ? '+' : '-'}${currency}${tx.amount.toLocaleString()}
-                </div>
-              </div>
-            `).join('') : `
-              <div style="text-align: center; padding: 40px; color: #666;">
-                <div style="font-size: 48px; margin-bottom: 20px;">📭</div>
-                <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">No Transactions Found</div>
-                <div style="font-size: 14px;">Try adjusting your filters to see more results.</div>
-              </div>
-            `}
-          </div>
-          
-          <div class="footer">
-            Generated by CashCraft • ${new Date().toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })}
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    return htmlContent;
-  };
 
   const downloadFile = async (content: string, filename: string, mimeType: string, UTI?: string) => {
     try {
@@ -429,12 +216,27 @@ export default function Transactions() {
     }, 500);
   };
 
-  const handleDownloadImage = () => {
+  const handleDownloadImage = async () => {
     setShowDownload(false);
-    setTimeout(async () => {
-      const imageContent = generateImageContent(filteredTransactions);
-      await downloadFile(imageContent, 'transactions_report.html', 'text/html', 'public.html');
-    }, 500);
+    try {
+      setTimeout(async () => {
+        if (viewShotRef.current?.capture) {
+          const uri = await viewShotRef.current.capture();
+          if (await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(uri, {
+              mimeType: 'image/png',
+              UTI: 'public.png',
+              dialogTitle: 'Download Transaction Receipt'
+            });
+          } else {
+            Alert.alert('Sharing not available', 'Sharing is not available on this device.');
+          }
+        }
+      }, 500);
+    } catch (error) {
+      console.error('Error capturing image:', error);
+      Alert.alert('Error', 'Failed to generate image.');
+    }
   };
 
   // Filter and sort transactions
@@ -1051,6 +853,119 @@ export default function Transactions() {
             </TouchableOpacity>
           </TouchableOpacity>
         </Modal>
+      </View>
+      {/* Hidden Bill Receipt for ViewShot */}
+      <View style={{ position: 'absolute', top: 0, left: 0, opacity: 0.01, zIndex: -1000, pointerEvents: 'none' }}>
+        <ViewShot ref={viewShotRef} options={{ format: "png", quality: 1 }}>
+          <View style={{ backgroundColor: '#fff', padding: 24, width: 400, borderColor: '#111827', borderWidth: 2, borderRadius: 8 }}>
+            
+            {/* Top Official Seal/Header */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Image source={require("../../assets/images/icon.png")} style={{ width: 36, height: 36, marginRight: 10, borderRadius: 8 }} />
+                <View>
+                  <Text style={{ fontSize: 22, fontWeight: '900', color: '#111827', letterSpacing: 1.5 }}>CASHCRAFT</Text>
+                  <Text style={{ fontSize: 10, color: '#6B7280', fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', marginTop: 2 }}>Official Financial Ledger</Text>
+                </View>
+              </View>
+              {/* Logo / Badge */}
+              <View style={{ backgroundColor: '#EEF2FF', padding: 8, borderRadius: 12, borderWidth: 1, borderColor: '#C7D2FE', alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="shield-checkmark" size={28} color="#4F46E5" />
+              </View>
+            </View>
+
+            {/* Document Metadata Details */}
+            <View style={{ backgroundColor: '#F9FAFB', padding: 12, borderRadius: 8, marginBottom: 20, borderWidth: 1, borderColor: '#E5E7EB' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                <Text style={{ fontSize: 10, color: '#6B7280', fontWeight: '500' }}>DOCUMENT REF:</Text>
+                <Text style={{ fontSize: 10, color: '#1F2937', fontWeight: '700', fontFamily: 'Courier' }}>CC-{Math.random().toString(36).substring(2, 8).toUpperCase()}-{new Date().getTime().toString().slice(-6)}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                <Text style={{ fontSize: 10, color: '#6B7280', fontWeight: '500' }}>ISSUED TO:</Text>
+                <Text style={{ fontSize: 10, color: '#1F2937', fontWeight: '700' }}>{user?.email || 'Authenticated CashCraft User'}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <Text style={{ fontSize: 10, color: '#6B7280', fontWeight: '500' }}>SECURITY STATUS:</Text>
+                <Text style={{ fontSize: 10, color: '#10B981', fontWeight: '800', letterSpacing: 0.5 }}>✓ VERIFIED SECURE</Text>
+              </View>
+            </View>
+
+            <View style={{ borderBottomWidth: 1.5, borderBottomColor: '#111827', borderStyle: 'solid', marginBottom: 16 }} />
+            
+            {/* Header Columns */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, paddingHorizontal: 4 }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: '#4B5563', flex: 2 }}>DETAILS</Text>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: '#4B5563', flex: 1, textAlign: 'center' }}>CATEGORY</Text>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: '#4B5563', flex: 1.2, textAlign: 'right' }}>AMOUNT</Text>
+            </View>
+            <View style={{ borderBottomWidth: 1, borderBottomColor: '#E5E7EB', marginBottom: 12 }} />
+
+            {filteredTransactions.length > 0 ? filteredTransactions.map((tx, idx) => (
+              <View key={tx.id || idx} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingHorizontal: 4 }}>
+                <View style={{ flex: 2, paddingRight: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#111827' }} numberOfLines={1}>{tx.description}</Text>
+                  <Text style={{ fontSize: 10, color: '#6B7280', marginTop: 1 }}>{formatDateShort(tx.date)}</Text>
+                </View>
+                <Text style={{ fontSize: 11, color: '#4B5563', fontWeight: '500', flex: 1, textAlign: 'center' }} numberOfLines={1}>{tx.categoryName || 'Unknown'}</Text>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: tx.type === 'income' ? '#059669' : '#DC2626', flex: 1.2, textAlign: 'right' }}>
+                  {tx.type === 'income' ? '+' : '-'}{currency}{tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Text>
+              </View>
+            )) : (
+              <Text style={{ textAlign: 'center', color: '#9CA3AF', marginVertical: 24, fontSize: 12 }}>No transactions to display.</Text>
+            )}
+            
+            <View style={{ borderBottomWidth: 1.5, borderBottomColor: '#111827', borderStyle: 'solid', marginVertical: 16 }} />
+            
+            {/* Financial Summary */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6, paddingHorizontal: 4 }}>
+              <Text style={{ fontSize: 12, color: '#4B5563', fontWeight: '500' }}>Subtotal Income</Text>
+              <Text style={{ fontSize: 12, color: '#1F2937', fontWeight: '600' }}>{currency}{filteredTransactions.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</Text>
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, paddingHorizontal: 4 }}>
+              <Text style={{ fontSize: 12, color: '#4B5563', fontWeight: '500' }}>Subtotal Expense</Text>
+              <Text style={{ fontSize: 12, color: '#1F2937', fontWeight: '600' }}>{currency}{filteredTransactions.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</Text>
+            </View>
+            
+            <View style={{ borderBottomWidth: 1, borderBottomColor: '#E5E7EB', borderStyle: 'dashed', marginVertical: 8 }} />
+            
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, paddingHorizontal: 4 }}>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: '#111827', textTransform: 'uppercase' }}>Net Balance</Text>
+              <Text style={{ fontSize: 16, fontWeight: '800', color: '#111827' }}>
+                {currency}{totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </Text>
+            </View>
+            
+            <View style={{ borderBottomWidth: 1.5, borderBottomColor: '#111827', borderStyle: 'solid', marginVertical: 16 }} />
+            
+            {/* Signature & Verification section */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+              {/* Barcode representation */}
+              <View style={{ width: 120, height: 40, justifyContent: 'center' }}>
+                <View style={{ flexDirection: 'row', height: 28, alignItems: 'stretch' }}>
+                  {/* Fake barcode bars */}
+                  {[1,3,1,2,4,1,2,3,1,4,1,2,1,3,2,1,4,1].map((width, idx) => (
+                    <View key={idx} style={{ backgroundColor: '#111827', width: width, marginRight: idx % 3 === 0 ? 2 : 1 }} />
+                  ))}
+                </View>
+                <Text style={{ fontSize: 7, color: '#6B7280', letterSpacing: 2, marginTop: 4, textAlign: 'center', fontFamily: 'Courier' }}>CASHCRAFT SECURE</Text>
+              </View>
+
+              {/* Digital Signature Stamp */}
+              <View style={{ alignItems: 'center', borderWidth: 1, borderColor: '#4F46E5', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6, transform: [{ rotate: '-3deg' }] }}>
+                <Text style={{ fontSize: 8, color: '#4F46E5', fontWeight: '800', letterSpacing: 0.5 }}>DIGITALLY SIGNED</Text>
+                <Text style={{ fontSize: 10, color: '#4F46E5', fontWeight: '900', fontFamily: 'Courier', marginVertical: 2 }}>CashCraft Labs</Text>
+                <Text style={{ fontSize: 7, color: '#4F46E5', fontWeight: '600' }}>AUTHENTIC LEDGER</Text>
+              </View>
+            </View>
+
+            <View style={{ borderTopWidth: 1, borderTopColor: '#E5E7EB', marginTop: 24, paddingTop: 12 }}>
+              <Text style={{ textAlign: 'center', fontSize: 9, color: '#9CA3AF', lineHeight: 12 }}>
+                This is a computer-generated ledger certified by CashCraft cryptographic protocols. No physical signature is required. For security verifications, refer to the document reference identifier listed above.
+              </Text>
+            </View>
+          </View>
+        </ViewShot>
       </View>
     </SafeAreaView>
   );

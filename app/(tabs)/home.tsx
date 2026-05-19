@@ -1,24 +1,22 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Image } from "react-native";
-import { HomeScreenSkeleton } from '../components/skeleton';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { FontAwesome5 } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
+import { FontAwesome5, Ionicons } from '@expo/vector-icons';
+import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
-import { categoriesService, Category } from '../services/categoriesService';
-import { transactionsService, Transaction, TransactionStats } from '../services/transactionsService';
+import { router, useFocusEffect } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { doc, getDoc } from 'firebase/firestore';
+import React, { useCallback, useEffect, useState } from "react";
+import { Image, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { HomeScreenSkeleton } from '../components/skeleton';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import { useCurrency } from '../context/CurrencyContext';
+import { useTheme } from '../context/ThemeContext';
+import { db } from '../firebaseConfig';
+import { categoriesService } from '../services/categoriesService';
+import { notificationService } from '../services/notificationService';
+import { transactionsService } from '../services/transactionsService';
 import { formatDateShort } from '../utils/dateUtils';
 import { getIconComponent } from '../utils/iconUtils';
-import { getDoc, doc } from 'firebase/firestore';
-import { db } from '../firebaseConfig';
-import { StatusBar } from 'expo-status-bar';
-import { useQuery } from '@tanstack/react-query';
-import { notificationService } from '../services/notificationService';
-import Constants from 'expo-constants';
 
 declare global {
   interface Window {
@@ -30,7 +28,7 @@ export default function Home() {
   const { user } = useAuth();
   const { theme } = useTheme();
   const { currency } = useCurrency();
-  
+
   const [refreshing, setRefreshing] = useState(false);
 
   const styles = StyleSheet.create({
@@ -390,7 +388,7 @@ export default function Home() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top','left','right']}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar style={theme.statusBarStyle} />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -428,14 +426,14 @@ export default function Home() {
             Spending Progress: {getProgressPercentage().toFixed(1)}% of income
           </Text>
           <View style={styles.progressBarBg}>
-            <View 
+            <View
               style={[
-                styles.progressBarFill, 
-                { 
+                styles.progressBarFill,
+                {
                   width: `${getProgressPercentage()}%`,
                   backgroundColor: getProgressBarColor()
                 }
-              ]} 
+              ]}
             />
           </View>
           <View style={styles.balanceRow}>
@@ -459,7 +457,7 @@ export default function Home() {
         {categories.length > 0 ? (
           <View style={styles.categoryGrid}>
             {categories.map((cat, idx) => (
-              <View key={cat.id} style={styles.categoryCard}> 
+              <View key={cat.id} style={styles.categoryCard}>
                 <View style={[styles.categoryIcon, { backgroundColor: cat.color + '20' }]}>
                   {getIconComponent(cat.icon, cat.color)}
                 </View>
@@ -479,8 +477,8 @@ export default function Home() {
             <Text style={styles.emptyStateMessage}>
               Start adding transactions to see your spending breakdown by category
             </Text>
-            <TouchableOpacity 
-              style={styles.emptyStateButton} 
+            <TouchableOpacity
+              style={styles.emptyStateButton}
               onPress={() => router.push('/(tabs)/add')}
             >
               <Text style={styles.emptyStateButtonText}>Add Transaction</Text>
@@ -520,8 +518,8 @@ export default function Home() {
               <Text style={styles.emptyStateMessage}>
                 Start tracking your finances by adding your first transaction
               </Text>
-              <TouchableOpacity 
-                style={styles.emptyStateButton} 
+              <TouchableOpacity
+                style={styles.emptyStateButton}
                 onPress={() => router.push('/(tabs)/add')}
               >
                 <Text style={styles.emptyStateButtonText}>Add Transaction</Text>
