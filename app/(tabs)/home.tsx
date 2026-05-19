@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Image } from "react-native";
 import { HomeScreenSkeleton } from '../components/skeleton';
@@ -16,6 +16,7 @@ import { getIconComponent } from '../utils/iconUtils';
 import { getDoc, doc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { StatusBar } from 'expo-status-bar';
+import { useQuery } from '@tanstack/react-query';
 import { notificationService } from '../services/notificationService';
 import Constants from 'expo-constants';
 
@@ -30,19 +31,7 @@ export default function Home() {
   const { theme } = useTheme();
   const { currency } = useCurrency();
   
-  const [firebaseStatus, setFirebaseStatus] = useState<string>('Checking...');
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [stats, setStats] = useState<TransactionStats>({
-    totalIncome: 0,
-    totalExpense: 0,
-    balance: 0,
-    transactionCount: 0
-  });
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [categorySpending, setCategorySpending] = useState<{ [key: string]: number }>({});
-  const [userProfile, setUserProfile] = useState<{ fullName?: string; firstName?: string; lastName?: string }>({});
 
   const styles = StyleSheet.create({
     container: {
@@ -313,13 +302,11 @@ export default function Home() {
     return theme.error; // Red for high spending
   };
 
-  const fetchData = async () => {
-    if (!user?.uid) return;
+  const { data, isLoading: loading, refetch } = useQuery({
+    queryKey: ['homeData', user?.uid],
+    queryFn: async () => {
+      if (!user?.uid) throw new Error('No user');
 
-    try {
-      setLoading(true);
-
-      // Run independent Firebase queries concurrently to speed up loading
       const [userDoc, userCategories, allTransactions, userStats] = await Promise.all([
         getDoc(doc(db, 'users', user.uid)),
         categoriesService.getUserCategories(user.uid),
@@ -327,68 +314,66 @@ export default function Home() {
         transactionsService.getTransactionStats(user.uid)
       ]);
 
-      // Set user profile
+      let userProfileData: { fullName?: string; firstName?: string; lastName?: string } = {};
       if (userDoc.exists()) {
         const userData = userDoc.data();
-        setUserProfile({
+        userProfileData = {
           fullName: userData.fullName,
           firstName: userData.firstName,
           lastName: userData.lastName
-        });
+        };
       }
 
-      // Set categories
-      setCategories(userCategories.filter(cat => cat.type === 'expense'));
+      const expenseCategories = userCategories.filter(cat => cat.type === 'expense');
+      const recentTransactions = allTransactions.slice(0, 5);
 
-      // Extract recent transactions directly from the larger fetch
-      setTransactions(allTransactions.slice(0, 5));
-
-      // Set stats
-      setStats(userStats);
-
-      // Notify if balance is very low (<=10% of total income)
-      if (
-        userStats.totalIncome > 0 &&
-        userStats.balance > 0 &&
-        userStats.balance <= 0.1 * userStats.totalIncome &&
-        !window.__sentLowBalanceNotif
-      ) {
-        await notificationService.sendLowBalanceAlert();
-        window.__sentLowBalanceNotif = true;
-      }
-
-      // Calculate category spending from all transactions
       const spendingByCategory: { [key: string]: number } = {};
       allTransactions.forEach(tx => {
         if (tx.type === 'expense' && tx.categoryId) {
           spendingByCategory[tx.categoryId] = (spendingByCategory[tx.categoryId] || 0) + tx.amount;
         }
       });
-      setCategorySpending(spendingByCategory);
 
-      setFirebaseStatus('Firebase Connected! ✅');
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      setFirebaseStatus('Firebase Error! ❌');
-    } finally {
-      setLoading(false);
-    }
-  };
+      return {
+        userProfile: userProfileData,
+        categories: expenseCategories,
+        transactions: recentTransactions,
+        stats: userStats,
+        categorySpending: spendingByCategory
+      };
+    },
+    enabled: !!user?.uid,
+  });
+
+  const userProfile: { fullName?: string; firstName?: string; lastName?: string } = data?.userProfile || {};
+  const categories = data?.categories || [];
+  const transactions = data?.transactions || [];
+  const stats = data?.stats || { totalIncome: 0, totalExpense: 0, balance: 0, transactionCount: 0 };
+  const categorySpending = data?.categorySpending || {};
 
   useEffect(() => {
-    fetchData();
-  }, [user]);
+    if (
+      stats.totalIncome > 0 &&
+      stats.balance > 0 &&
+      stats.balance <= 0.1 * stats.totalIncome &&
+      !window.__sentLowBalanceNotif
+    ) {
+      notificationService.sendLowBalanceAlert().catch(console.error);
+      window.__sentLowBalanceNotif = true;
+    }
+  }, [stats]);
 
-  // Refresh when tab comes into focus (when user navigates to this tab)
   useFocusEffect(
-    React.useCallback(() => {
-      fetchData();
-    }, [user])
+    useCallback(() => {
+      if (user?.uid) {
+        refetch();
+      }
+    }, [user?.uid, refetch])
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchData();
+    await refetch();
     setRefreshing(false);
   };
 

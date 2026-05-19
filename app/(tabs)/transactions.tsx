@@ -2,7 +2,8 @@ import { FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 import { router, useFocusEffect } from 'expo-router';
 import * as Sharing from 'expo-sharing';
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
+import { useQuery } from '@tanstack/react-query';
 import { Alert, Dimensions, FlatList, Modal, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TransactionsScreenSkeleton } from '../components/skeleton';
@@ -36,8 +37,6 @@ export default function Transactions() {
   const { user } = useAuth();
   const { theme } = useTheme();
   const { currency } = useCurrency();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('newest');
@@ -47,36 +46,27 @@ export default function Transactions() {
   const [showFilter, setShowFilter] = useState(false);
   const [showDownload, setShowDownload] = useState(false);
 
-  // Fetch transactions from Firebase
-  const fetchTransactions = async () => {
-    if (!user?.uid) return;
+  // Fetch transactions using React Query
+  const { data: userTransactions, isLoading: loading, refetch } = useQuery({
+    queryKey: ['transactions', user?.uid],
+    queryFn: () => transactionsService.getUserTransactions(user?.uid!, 1000),
+    enabled: !!user?.uid,
+  });
 
-    try {
-      setLoading(true);
-      const userTransactions = await transactionsService.getUserTransactions(user.uid, 1000); // Get all transactions
-      setTransactions(userTransactions);
-    } catch (error) {
-      console.error('Error fetching transactions:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Initial load
-  useEffect(() => {
-    fetchTransactions();
-  }, [user]);
+  const transactions = userTransactions || [];
 
   // Refresh when tab comes into focus (when user navigates to this tab)
   useFocusEffect(
-    React.useCallback(() => {
-      fetchTransactions();
-    }, [user])
+    useCallback(() => {
+      if (user?.uid) {
+        refetch();
+      }
+    }, [user?.uid, refetch])
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchTransactions();
+    await refetch();
     setRefreshing(false);
   };
 
@@ -102,8 +92,10 @@ export default function Transactions() {
             try {
               await transactionsService.deleteTransaction(transaction.id!);
 
-              // Remove from local state
-              setTransactions(prev => prev.filter(tx => tx.id !== transaction.id));
+              // To update local state when using React Query, we invalidate the query or let the optimistic update handle it. 
+              // Since we are refetching on focus, and deleting, we can either call refetch() or just let the cache update.
+              // For a simple approach, we can force a refetch:
+              await refetch();
 
               // Show success notification
               Alert.alert('Success', 'Transaction deleted successfully');

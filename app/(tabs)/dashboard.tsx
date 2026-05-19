@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from "react-native";
 import { DashboardScreenSkeleton } from '../components/skeleton';
@@ -17,7 +18,7 @@ interface Category {
   label: string;
   color: string;
   value: number;
-  icon: React.ReactNode;
+  iconName: string;
 }
 
 interface TopSpendingCategory {
@@ -25,7 +26,7 @@ interface TopSpendingCategory {
   value: number;
   percent: number;
   color: string;
-  icon: React.ReactNode;
+  iconName: string;
 }
 
 interface DonutChartProps {
@@ -83,24 +84,13 @@ export default function Dashboard() {
   const { theme } = useTheme();
   const { currency } = useCurrency();
   const [period, setPeriod] = useState<string>('Monthly');
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [topSpending, setTopSpending] = useState<TopSpendingCategory[]>([]);
-  const [stats, setStats] = useState<TransactionStats>({
-    totalIncome: 0,
-    totalExpense: 0,
-    balance: 0,
-    transactionCount: 0
-  });
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchData = async () => {
-    if (!user?.uid) return;
+  const { data, isLoading: loading, refetch } = useQuery({
+    queryKey: ['dashboardData', user?.uid, period],
+    queryFn: async () => {
+      if (!user?.uid) throw new Error('No user');
 
-    try {
-      setLoading(true);
-      
-      // Calculate date range based on selected period
       const now = new Date();
       let startDate: Date;
       
@@ -120,14 +110,12 @@ export default function Dashboard() {
           startDate = new Date(now.getFullYear(), now.getMonth(), 1);
       }
 
-      // Fetch data in parallel for better performance
       const [transactions, firebaseCategories] = await Promise.all([
         transactionsService.getTransactionsByDateRange(user.uid, startDate, now),
         categoriesService.getUserCategories(user.uid)
       ]);
       
-      // Calculate stats efficiently
-      const stats = transactions.reduce((acc: TransactionStats, t: Transaction) => {
+      const dashboardStats = transactions.reduce((acc: TransactionStats, t: Transaction) => {
         if (t.type === 'income') {
           acc.totalIncome += t.amount;
         } else {
@@ -136,13 +124,10 @@ export default function Dashboard() {
         return acc;
       }, { totalIncome: 0, totalExpense: 0, balance: 0, transactionCount: transactions.length });
       
-      stats.balance = stats.totalIncome - stats.totalExpense;
-      setStats(stats);
+      dashboardStats.balance = dashboardStats.totalIncome - dashboardStats.totalExpense;
 
-      // Create category map for faster lookups
       const categoryMap = new Map(firebaseCategories.map(c => [c.id, c]));
       
-      // Calculate spending by category efficiently
       const categorySpending = new Map<string, number>();
       transactions.forEach((transaction: Transaction) => {
         if (transaction.type === 'expense') {
@@ -153,62 +138,55 @@ export default function Dashboard() {
         }
       });
 
-      // Convert to chart data
       const chartData: Category[] = Array.from(categorySpending.entries()).map(([name, amount]) => {
         const category = firebaseCategories.find((c: FirebaseCategory) => c.name === name);
         return {
           label: name,
           value: amount,
           color: category?.color || '#4CAF50',
-          icon: getIconComponent(category?.icon || 'category', category?.color || '#4CAF50')
+          iconName: category?.icon || 'category'
         };
       });
 
-      setCategories(chartData);
-
-      // Calculate top spending categories efficiently
       const topCategories = Array.from(categorySpending.entries())
         .map(([name, amount]) => {
           const category = firebaseCategories.find((c: FirebaseCategory) => c.name === name);
-          const percent = stats.totalExpense > 0 ? (amount / stats.totalExpense) * 100 : 0;
+          const percent = dashboardStats.totalExpense > 0 ? (amount / dashboardStats.totalExpense) * 100 : 0;
           return {
             label: name,
             value: amount,
             percent: Math.round(percent),
             color: category?.color || '#4CAF50',
-            icon: getIconComponent(category?.icon || 'category', category?.color || '#4CAF50')
+            iconName: category?.icon || 'category'
           };
         })
         .sort((a, b) => b.value - a.value)
         .slice(0, 5);
 
-      setTopSpending(topCategories);
-      
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      return {
+        stats: dashboardStats,
+        categories: chartData,
+        topSpending: topCategories
+      };
+    },
+    enabled: !!user?.uid,
+  });
 
-  useEffect(() => {
-    if (user?.uid) {
-      fetchData();
-    }
-  }, [user?.uid, period]);
+  const stats = data?.stats || { totalIncome: 0, totalExpense: 0, balance: 0, transactionCount: 0 };
+  const categories = data?.categories || [];
+  const topSpending = data?.topSpending || [];
 
-  // Refresh when tab comes into focus (when user navigates to this tab)
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       if (user?.uid) {
-        fetchData();
+        refetch();
       }
-    }, [user, period])
+    }, [user?.uid, period, refetch])
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchData();
+    await refetch();
     setRefreshing(false);
   };
 
@@ -696,7 +674,7 @@ export default function Dashboard() {
               <View key={cat.label} style={styles.topRow}>
                 <View style={styles.topLeft}>
                   <View style={styles.topNum}><Text style={styles.topNumText}>{idx + 1}</Text></View>
-                  <View style={styles.topIcon}>{cat.icon}</View>
+                  <View style={styles.topIcon}>{getIconComponent(cat.iconName, cat.color)}</View>
                   <View>
                     <Text style={styles.topLabel}>{cat.label}</Text>
                     <Text style={styles.topSub}>{period === 'Daily' ? 'Today' : period === 'Weekly' ? 'This week' : 'This month'}</Text>

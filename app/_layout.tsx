@@ -8,6 +8,8 @@ import { ThemeProvider } from './context/ThemeContext';
 import { CurrencyProvider } from './context/CurrencyContext';
 import NavigationBarManager from './components/NavigationBarManager';
 import { AppLoadingSkeleton } from './components/skeleton';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { queryClient, asyncStoragePersister } from './services/queryClient';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -70,13 +72,19 @@ function RootLayoutContent() {
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <ThemeProvider>
-          <CurrencyProvider>
-            <RootLayoutContent />
-          </CurrencyProvider>
-        </ThemeProvider>
-      </AuthProvider>
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{ persister: asyncStoragePersister }}
+      >
+        <AuthProvider>
+          <ThemeProvider>
+            <CurrencyProvider>
+              <RootLayoutContent />
+            </CurrencyProvider>
+          </ThemeProvider>
+        </AuthProvider>
+      </PersistQueryClientProvider>
     </SafeAreaProvider>
   );
 }
+
