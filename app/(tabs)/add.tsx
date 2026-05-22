@@ -350,6 +350,7 @@ export default function Add() {
           // Force background refetch to sync actual database records (real IDs & remote URLs)
           queryClient.invalidateQueries({ queryKey });
           queryClient.invalidateQueries({ queryKey: ['homeData', user.uid] });
+          queryClient.invalidateQueries({ queryKey: ['dashboardData', user.uid] });
 
         } catch (backgroundError) {
           console.error('Background transaction save failed:', backgroundError);
@@ -361,6 +362,7 @@ export default function Add() {
           // Invalidate queries to ensure sync
           queryClient.invalidateQueries({ queryKey });
           queryClient.invalidateQueries({ queryKey: ['homeData', user.uid] });
+          queryClient.invalidateQueries({ queryKey: ['dashboardData', user.uid] });
 
           Alert.alert('Save Failed', `Failed to save transaction "${title}". Please try again.`);
         }

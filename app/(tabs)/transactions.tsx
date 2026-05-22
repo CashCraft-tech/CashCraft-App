@@ -110,6 +110,7 @@ export default function Transactions() {
               // Silently invalidate queries in the background to ensure data sync
               queryClient.invalidateQueries({ queryKey });
               queryClient.invalidateQueries({ queryKey: ['homeData', user?.uid] });
+              queryClient.invalidateQueries({ queryKey: ['dashboardData', user?.uid] });
 
               // Show success notification asynchronously
               Alert.alert('Success', 'Transaction deleted successfully');

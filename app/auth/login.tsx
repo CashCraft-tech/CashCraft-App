@@ -25,8 +25,8 @@ export default function Login() {
       return;
     }
     
-    if (!authService.validateEmail(email.trim())) {
-      setError('Please enter a valid email address with a supported domain (e.g., gmail.com, outlook.com)');
+    if (!authService.validateEmail(email.trim(), false)) {
+      setError('Please enter a valid email address');
       return;
     }
 
@@ -318,7 +318,7 @@ export default function Login() {
           </View>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account? </Text>
+            <Text style={styles.footerText}>Don&apos;t have an account? </Text>
             <TouchableOpacity onPress={() => router.push('/auth/signup')}>
               <Text style={styles.footerLink}>Sign Up</Text>
             </TouchableOpacity>

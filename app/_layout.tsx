@@ -1,6 +1,6 @@
 import 'react-native-gesture-handler';
 import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -70,20 +70,30 @@ function RootLayoutContent() {
 }
 
 export default function RootLayout() {
+  const [isRestored, setIsRestored] = useState(false);
+
   return (
     <SafeAreaProvider>
-      <PersistQueryClientProvider
-        client={queryClient}
-        persistOptions={{ persister: asyncStoragePersister }}
-      >
-        <AuthProvider>
-          <ThemeProvider>
-            <CurrencyProvider>
-              <RootLayoutContent />
-            </CurrencyProvider>
-          </ThemeProvider>
-        </AuthProvider>
-      </PersistQueryClientProvider>
+      <ThemeProvider>
+        <PersistQueryClientProvider
+          client={queryClient}
+          persistOptions={{
+            persister: asyncStoragePersister,
+            maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
+          }}
+          onSuccess={() => setIsRestored(true)}
+        >
+          {isRestored ? (
+            <AuthProvider>
+              <CurrencyProvider>
+                <RootLayoutContent />
+              </CurrencyProvider>
+            </AuthProvider>
+          ) : (
+            <AppLoadingSkeleton />
+          )}
+        </PersistQueryClientProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

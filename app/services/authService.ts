@@ -253,16 +253,12 @@ export const authService = {
       // Password update errors
       case 'auth/requires-recent-login':
         return 'Please sign in again to change your password.';
-      case 'auth/wrong-password':
-        return 'Current password is incorrect.';
       
       // General errors
       case 'auth/invalid-credential':
         return 'Invalid credentials. Please try again.';
       case 'auth/account-exists-with-different-credential':
         return 'An account already exists with the same email address but different sign-in credentials.';
-      case 'auth/operation-not-allowed':
-        return 'This operation is not allowed.';
       case 'auth/user-token-expired':
         return 'Your session has expired. Please sign in again.';
       case 'auth/user-mismatch':
@@ -278,9 +274,11 @@ export const authService = {
   },
 
   // Validate email format and domain
-  validateEmail(email: string): boolean {
+  validateEmail(email: string, enforceDomain: boolean = true): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) return false;
+    
+    if (!enforceDomain) return true;
     
     // Extract domain
     const parts = email.split('@');
